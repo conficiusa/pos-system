@@ -14,15 +14,15 @@ A Point of Sale system for gold buying businesses. Handles customer registration
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16, React 19 |
-| Runtime | Cloudflare Workers via [OpenNextJS](https://opennext.js.org/cloudflare) |
-| Database | Cloudflare D1 (SQLite) + Drizzle ORM |
-| Auth | Better Auth (email/password, admin plugin) |
-| UI | shadcn/ui, Tailwind CSS, Recharts |
-| Data fetching | TanStack Query v5 |
-| Offline sync | IndexedDB (`idb`) + service worker |
+| Layer         | Technology                                                              |
+| ------------- | ----------------------------------------------------------------------- |
+| Framework     | Next.js 16, React 19                                                    |
+| Runtime       | Cloudflare Workers via [OpenNextJS](https://opennext.js.org/cloudflare) |
+| Database      | Cloudflare D1 (SQLite) + Drizzle ORM                                    |
+| Auth          | Better Auth (email/password, admin plugin)                              |
+| UI            | shadcn/ui, Tailwind CSS, Recharts                                       |
+| Data fetching | TanStack Query v5                                                       |
+| Offline sync  | IndexedDB (`idb`) + service worker                                      |
 
 ## Getting Started
 
