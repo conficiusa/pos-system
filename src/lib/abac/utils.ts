@@ -1,4 +1,3 @@
-import { intlFormat } from "date-fns";
 import type {
   ActionsPerResource,
   CanPerformAction,

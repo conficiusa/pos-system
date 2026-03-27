@@ -1,4 +1,9 @@
-import { Customer, NewSyncQueueEntry, Order, SyncQueueEntry } from "@/lib/db/schemas";
+import type {
+  Customer,
+  NewSyncQueueEntry,
+  Order,
+  SyncQueueEntry,
+} from "@/lib/db/schemas";
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { nanoid } from "nanoid";
 
@@ -276,10 +281,13 @@ if (typeof window !== "undefined") {
   });
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.addEventListener("message", (event: MessageEvent) => {
-      if ((event.data as { type?: string })?.type === "SW_SYNC_REQUESTED") {
-        flushSyncQueue().catch(console.warn);
-      }
-    });
+    navigator.serviceWorker.addEventListener(
+      "message",
+      (event: MessageEvent) => {
+        if ((event.data as { type?: string })?.type === "SW_SYNC_REQUESTED") {
+          flushSyncQueue().catch(console.warn);
+        }
+      },
+    );
   }
 }
