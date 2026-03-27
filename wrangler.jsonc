@@ -36,11 +36,11 @@
       "observability": {
         "enabled": true,
       },
-      // TODO Create an actual D1 database and update the database_id
       "d1_databases": [
         {
           "binding": "DB",
-          "database_id": "random-db-string",
+          "database_name": "pos-db-dev",
+          "database_id": "985ec90f-2a26-4332-8161-6267ef4dc57e",
           "migrations_dir": "./drizzle",
         },
       ],
