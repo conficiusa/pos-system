@@ -3,7 +3,7 @@ name: Deploy to development enviroment
 on:
   push:
     branches:
-      - main
+      - master
 
 concurrency:
   group: deploy-dev
