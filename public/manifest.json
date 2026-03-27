@@ -1,0 +1,18 @@
+{
+  "name": "GoldPOS",
+  "short_name": "GoldPOS",
+  "description": "Gold purchase point-of-sale",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#1d9e75",
+  "background_color": "#f6f6f2",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

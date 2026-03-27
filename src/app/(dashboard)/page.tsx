@@ -1,0 +1,282 @@
+"use client"
+
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { DashboardShell } from "@/components/dashboard/dashboard-shell"
+import { IconChevron, IconExport, IconSearch } from "@/components/dashboard/icons"
+import { Topbar } from "@/components/dashboard/topbar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { cn, exportXlsx, fmtGHS } from "@/lib/utils"
+import { useSessionContext } from "@/components/dashboard/session-guard"
+
+type OrderWithCustomer = {
+  id: string
+  orderNumber: string | null
+  customerId: string
+  customerName: string
+  customerPhone: string
+  createdAt: string
+  weightGrams: number
+  estimatedRate: number
+  estimatedValue: number
+  amountPaid: number
+  notes: string | null
+  status: string
+}
+
+const displayId = (o: Pick<OrderWithCustomer, "id" | "orderNumber">) =>
+  o.orderNumber ?? `#${o.id.slice(0, 6).toUpperCase()}`
+
+type WeeklyStats = {
+  total: number
+  totalPaid: number
+  avgOrder: number
+  pending: number
+}
+
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+
+const filterButtons = [
+  { id: "", label: "All" },
+  { id: "pending", label: "Pending" },
+  { id: "reconciled", label: "Reconciled" },
+]
+
+const SkeletonRow = () => (
+  <div className="grid grid-cols-[100px_1fr_80px_100px_100px_80px_36px] items-center gap-0 border-b border-pos-border-tertiary px-4 py-[11px]">
+    <span className="inline-block h-3.5 w-16 animate-pulse rounded bg-pos-bg-secondary" />
+    <div className="space-y-1.5">
+      <span className="inline-block h-3.5 w-28 animate-pulse rounded bg-pos-bg-secondary" />
+      <span className="block h-3 w-20 animate-pulse rounded bg-pos-bg-secondary" />
+    </div>
+    <span className="inline-block h-3.5 w-10 animate-pulse rounded bg-pos-bg-secondary" />
+    <span className="inline-block h-3.5 w-20 animate-pulse rounded bg-pos-bg-secondary" />
+    <span className="inline-block h-3.5 w-20 animate-pulse rounded bg-pos-bg-secondary" />
+    <span className="inline-block h-5 w-16 animate-pulse rounded-full bg-pos-bg-secondary" />
+    <span />
+  </div>
+)
+
+export default function OrdersPage() {
+  const { sidebarUser } = useSessionContext()
+  const [statusFilter, setStatusFilter] = useState<"" | "pending" | "reconciled">("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  const statsQuery = useQuery({
+    queryKey: ["reports-stats"],
+    queryFn: () =>
+      fetch("/api/reports/stats").then((r) => r.json() as Promise<{ weeklyOrders: WeeklyStats }>),
+  })
+  const stats = statsQuery.data?.weeklyOrders ?? null
+
+  const ordersQuery = useQuery({
+    queryKey: ["orders", statusFilter, searchTerm],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      if (statusFilter) params.set("status", statusFilter)
+      if (searchTerm.trim()) params.set("q", searchTerm.trim())
+      const url = `/api/orders${params.toString() ? `?${params}` : ""}`
+      const data = await fetch(url).then((r) => r.json() as Promise<{ data: OrderWithCustomer[] }>)
+      return data.data ?? []
+    },
+  })
+  const orders = ordersQuery.data ?? []
+
+  const selectedOrder = orders.find((o) => o.id === selectedId) ?? null
+
+  const handleExport = () => {
+    exportXlsx(
+      `orders-${new Date().toISOString().slice(0, 10)}`,
+      "Orders",
+      ["Order #", "Date", "Customer", "Phone", "Weight (g)", "Rate (GHS/g)", "Est. Value (GHS)", "Amount Paid (GHS)", "Status", "Notes"],
+      orders.map((o) => [
+        displayId(o),
+        fmtDate(o.createdAt),
+        o.customerName,
+        o.customerPhone,
+        o.weightGrams,
+        o.estimatedRate,
+        o.estimatedValue,
+        o.amountPaid,
+        o.status,
+        o.notes,
+      ]),
+    )
+  }
+
+  const metrics = [
+    { label: "This week", value: stats ? stats.total + " orders" : "— orders" },
+    { label: "Pending reconciliation", value: stats ? String(stats.pending) : "—", valueClass: "text-pos-warning" },
+    { label: "Total paid out", value: stats ? "GHS " + stats.totalPaid.toLocaleString() : "GHS —" },
+    { label: "Avg. order value", value: stats ? "GHS " + Math.round(stats.avgOrder).toLocaleString() : "GHS —" },
+  ]
+
+  return (
+    <DashboardShell activeItem="orders" user={sidebarUser}>
+      <Topbar
+        title="Orders"
+        subtitle="All gold purchase orders"
+        actions={
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={orders.length === 0}
+            className="h-8 gap-2 rounded-[var(--radius-md)] border-pos-border-secondary bg-pos-bg-primary px-3 text-[12px] font-medium text-pos-text-secondary"
+          >
+            <IconExport className="size-3.5" />
+            Export
+          </Button>
+        }
+      />
+
+      <div className="flex flex-1 flex-col gap-4 p-5">
+        <div className="grid grid-cols-4 gap-3">
+          {metrics.map((metric) => (
+            <div
+              key={metric.label}
+              className="rounded-[var(--radius-md)] border border-pos-border-tertiary bg-pos-bg-primary px-4 py-3"
+            >
+              <p className="text-[11px] text-pos-text-secondary">{metric.label}</p>
+              <p className={cn("mt-1 text-[18px] font-medium text-pos-text-primary", metric.valueClass)}>
+                {statsQuery.isLoading ? (
+                  <span className="inline-block h-5 w-20 animate-pulse rounded bg-pos-bg-secondary" />
+                ) : (
+                  metric.value
+                )}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-[var(--radius-md)] border border-pos-border-secondary bg-pos-bg-primary px-3">
+            <IconSearch className="size-3.5 text-pos-text-tertiary" />
+            <Input
+              placeholder="Search by order ID or customer..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-9 border-0 bg-transparent px-0 text-[13px] text-pos-text-primary placeholder:text-pos-text-tertiary focus-visible:ring-0"
+            />
+          </div>
+          {filterButtons.map((filter) => (
+            <Button
+              key={filter.id}
+              variant="outline"
+              onClick={() => setStatusFilter(filter.id as "" | "pending" | "reconciled")}
+              className={cn(
+                "h-8 rounded-[var(--radius-md)] border-pos-border-secondary bg-pos-bg-primary px-3 text-[12px] font-medium text-pos-text-secondary",
+                statusFilter === filter.id && "border-pos-brand-mid bg-pos-brand-soft text-pos-brand-ink"
+              )}
+            >
+              {filter.label}
+            </Button>
+          ))}
+        </div>
+
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-pos-border-tertiary bg-pos-bg-primary">
+          <div className="grid grid-cols-[100px_1fr_80px_100px_100px_80px_36px] gap-0 border-b border-pos-border-tertiary bg-pos-bg-secondary px-4 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
+            <span>Order</span>
+            <span>Customer</span>
+            <span>Weight</span>
+            <span>Est. value</span>
+            <span>Paid out</span>
+            <span>Status</span>
+            <span />
+          </div>
+          <div>
+            {ordersQuery.isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+            ) : orders.length === 0 ? (
+              <div className="px-4 py-8 text-center text-[13px] text-pos-text-secondary">No orders found.</div>
+            ) : (
+              orders.map((order) => {
+                const statusStyle =
+                  order.status === "reconciled"
+                    ? "bg-pos-success-soft text-pos-success"
+                    : "bg-pos-warning-soft text-pos-warning"
+                const statusLabel = order.status === "reconciled" ? "Reconciled" : "Pending"
+                return (
+                  <div
+                    key={order.id}
+                    onClick={() => setSelectedId(order.id)}
+                    className="grid cursor-pointer grid-cols-[100px_1fr_80px_100px_100px_80px_36px] items-center gap-0 border-b border-pos-border-tertiary px-4 py-[11px] text-[13px] text-pos-text-primary hover:bg-pos-bg-secondary"
+                  >
+                    <div className="text-[12px] text-pos-text-secondary">{displayId(order)}</div>
+                    <div>
+                      <p className="font-medium text-pos-text-primary">{order.customerName}</p>
+                      <p className="text-[12px] text-pos-text-secondary">{fmtDate(order.createdAt)}</p>
+                    </div>
+                    <div className="text-[12px] text-pos-text-secondary">{order.weightGrams}g</div>
+                    <div>{fmtGHS(order.estimatedValue)}</div>
+                    <div>{fmtGHS(order.amountPaid)}</div>
+                    <div>
+                      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium", statusStyle)}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <div className="text-center text-[16px] text-pos-text-tertiary">
+                      <IconChevron className="inline-block size-4" />
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+
+        {selectedOrder && (
+          <div className="rounded-[var(--radius-lg)] bg-black/30 p-4">
+            <div className="ml-auto w-[320px] rounded-[var(--radius-lg)] border border-pos-border-tertiary bg-pos-bg-primary p-6">
+              <div className="flex items-center justify-between">
+                <p className="text-[14px] font-medium text-pos-text-primary">{displayId(selectedOrder)}</p>
+                <button className="text-[18px] text-pos-text-secondary" onClick={() => setSelectedId(null)}>
+                  x
+                </button>
+              </div>
+              <div className="mt-4 space-y-2 text-[13px]">
+                {[
+                  ["Customer", selectedOrder.customerName],
+                  ["Date", fmtDate(selectedOrder.createdAt)],
+                  ["Notes", selectedOrder.notes ?? "—"],
+                  ["Weight", selectedOrder.weightGrams + "g"],
+                  ["Estimated value", fmtGHS(selectedOrder.estimatedValue)],
+                  ["Amount paid", fmtGHS(selectedOrder.amountPaid)],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between border-b border-pos-border-tertiary pb-2 last:border-b-0"
+                  >
+                    <span className="text-pos-text-secondary">{label}</span>
+                    <span className="font-medium text-pos-text-primary">{value}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-b border-pos-border-tertiary pb-2">
+                  <span className="text-pos-text-secondary">Status</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      selectedOrder.status === "reconciled"
+                        ? "bg-pos-success-soft text-pos-success"
+                        : "bg-pos-warning-soft text-pos-warning"
+                    )}
+                  >
+                    {selectedOrder.status === "reconciled" ? "Reconciled" : "Pending"}
+                  </span>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                className="mt-4 h-8 w-full rounded-[var(--radius-md)] border-pos-border-secondary bg-pos-bg-primary text-[12px] font-medium text-pos-text-primary"
+              >
+                Reprint receipt
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </DashboardShell>
+  )
+}
