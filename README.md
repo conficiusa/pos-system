@@ -123,7 +123,7 @@ src/
 
 ## Domain Model
 
-```
+```text
 Customer
   └─ ledgerBalance       Running credit/arrears balance
 
