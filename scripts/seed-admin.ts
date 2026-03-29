@@ -12,7 +12,19 @@
  * the dashboard to create staff accounts.
  */
 
-import * as p from "@clack/prompts";
+import {
+  intro,
+  password,
+  cancel,
+  isCancel,
+  select,
+  confirm,
+  group,
+  text,
+  spinner,
+  note,
+  outro,
+} from "@clack/prompts";
 import { createClient } from "@libsql/client";
 import { D1Helper } from "@nerdfolio/drizzle-d1-helpers";
 import { hashPassword } from "better-auth/crypto";
@@ -152,7 +164,8 @@ async function seedRemote(
   const tmpFile = join(process.cwd(), `.seed-admin-${Date.now()}.sql`);
   try {
     writeFileSync(tmpFile, sql, "utf-8");
-    const envFlag = env === "production" ? "--env=production" : "--env=development";
+    const envFlag =
+      env === "production" ? "--env=production" : "--env=development";
     execSync(
       `pnpm exec wrangler d1 execute DB --remote ${envFlag} --file="${tmpFile}"`,
       { stdio: "inherit" },
@@ -165,40 +178,44 @@ async function seedRemote(
 }
 
 async function main() {
-  p.intro("GoldPOS — Seed Admin Account");
+  intro("GoldPOS — Seed Admin Account");
 
   let target = getTargetFromArgs();
 
   if (!target) {
-    const selected = await p.select({
+    const selected = await select({
       message: "Target environment",
       options: [
-        { value: "local", label: "Local", hint: "Local wrangler D1 SQLite file" },
+        {
+          value: "local",
+          label: "Local",
+          hint: "Local wrangler D1 SQLite file",
+        },
         { value: "development", label: "Development", hint: "Remote D1 — dev" },
         { value: "production", label: "Production", hint: "Remote D1 — prod" },
       ],
     });
-    if (p.isCancel(selected)) {
-      p.cancel("Cancelled.");
+    if (isCancel(selected)) {
+      cancel("Cancelled.");
       process.exit(0);
     }
     target = selected as Target;
   }
 
   if (target !== "local") {
-    const confirmed = await p.confirm({
+    const confirmed = await confirm({
       message: `You are about to seed the REMOTE ${target.toUpperCase()} database. Continue?`,
     });
-    if (p.isCancel(confirmed) || !confirmed) {
-      p.cancel("Cancelled.");
+    if (isCancel(confirmed) || !confirmed) {
+      cancel("Cancelled.");
       process.exit(0);
     }
   }
 
-  const values = await p.group(
+  const values = await group(
     {
       name: () =>
-        p.text({
+        text({
           message: "Full name",
           placeholder: "e.g. Ahmed Al-Farsi",
           validate: (v) => {
@@ -207,7 +224,7 @@ async function main() {
           },
         }),
       email: () =>
-        p.text({
+        text({
           message: "Email address",
           placeholder: "admin@example.com",
           validate: (v) => {
@@ -216,7 +233,7 @@ async function main() {
           },
         }),
       password: () =>
-        p.password({
+        password({
           message: "Password",
           validate: (v) => {
             if (!v || v.length < 8)
@@ -224,7 +241,7 @@ async function main() {
           },
         }),
       confirmPassword: ({ results }) =>
-        p.password({
+        password({
           message: "Confirm password",
           validate: (v) => {
             if (v !== results.password) return "Passwords do not match";
@@ -233,13 +250,13 @@ async function main() {
     },
     {
       onCancel: () => {
-        p.cancel("Cancelled.");
+        cancel("Cancelled.");
         process.exit(0);
       },
     },
   );
 
-  const spin = p.spinner();
+  const spin = spinner();
   spin.start(`Seeding admin account on ${target}…`);
 
   let userId: string;
@@ -251,13 +268,13 @@ async function main() {
     }
   } catch (err) {
     spin.stop("Failed.");
-    p.cancel(err instanceof Error ? err.message : String(err));
+    cancel(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 
   spin.stop("Done!");
 
-  p.note(
+  note(
     [
       `Name:   ${values.name}`,
       `Email:  ${values.email}`,
@@ -267,11 +284,11 @@ async function main() {
     "Account created",
   );
 
-  p.outro("The client can now log in with these credentials.");
+  outro("The client can now log in with these credentials.");
 }
 
 main().catch((err) => {
-  p.cancel("An unexpected error occurred.");
+  cancel("An unexpected error occurred.");
   console.error(err);
   process.exit(1);
 });
