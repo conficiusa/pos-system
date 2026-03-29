@@ -13,7 +13,7 @@
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "db:init:local": "wrangler d1 execute DB --local --env=development --command=\"SELECT 1\"",
-    "db:migration:apply:dev": "wrangler d1 migrations apply DB --remote --env=development",
+    "db:migration:apply:dev": "wrangler d1 migrations apply DB --remote -- --keep-vars --env=development",
     "db:migration:apply:local": "pnpm run db:init:local && wrangler d1 migrations apply DB --local --env=development",
     "db:migration:apply:prod": "wrangler d1 migrations apply DB --remote --env=production",
     "db:migration:generate": "drizzle-kit generate",
@@ -24,7 +24,8 @@
     "db:studio:local": "pnpm run db:init:local && drizzle-kit studio --port 4001",
     "deploy:dev": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env=development",
     "deploy:prod": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env=production",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts --env=development"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts --env=development",
+    "seed:admin": "pnpm exec tsx --tsconfig tsconfig.json scripts/seed-admin.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -55,6 +56,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@clack/prompts": "^1.1.0",
     "@eslint/eslintrc": "^3",
     "@libsql/client": "^0.17.2",
     "@nerdfolio/drizzle-d1-helpers": "^0.1.5",
@@ -66,6 +68,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.4",
     "wrangler": "^4.77.0"
   },

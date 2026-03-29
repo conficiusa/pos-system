@@ -1,5 +1,3 @@
-export const AUTH_API_BASE_PATH = "/api/auth";
-
 /**
  * https://www.better-auth.com/docs/concepts/session-management#cookie-cache
  */
