@@ -133,7 +133,7 @@ export default function OrdersPage() {
       />
 
       <div className="flex flex-1 flex-col gap-4 p-5">
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {metrics.map((metric) => (
             <div
               key={metric.label}
@@ -177,7 +177,8 @@ export default function OrdersPage() {
         </div>
 
         <div className="overflow-hidden rounded-[var(--radius-lg)] border border-pos-border-tertiary bg-pos-bg-primary">
-          <div className="grid grid-cols-[100px_1fr_80px_100px_100px_80px_36px] gap-0 border-b border-pos-border-tertiary bg-pos-bg-secondary px-4 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
+          <div className="overflow-x-auto">
+          <div className="grid min-w-150 grid-cols-[100px_1fr_80px_100px_100px_80px_36px] gap-0 border-b border-pos-border-tertiary bg-pos-bg-secondary px-4 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
             <span>Order</span>
             <span>Customer</span>
             <span>Weight</span>
@@ -186,7 +187,7 @@ export default function OrdersPage() {
             <span>Status</span>
             <span />
           </div>
-          <div>
+          <div className="min-w-150">
             {ordersQuery.isLoading ? (
               Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
             ) : orders.length === 0 ? (
@@ -225,11 +226,12 @@ export default function OrdersPage() {
               })
             )}
           </div>
+          </div>
         </div>
 
         {selectedOrder && (
           <div className="rounded-[var(--radius-lg)] bg-black/30 p-4">
-            <div className="ml-auto w-[320px] rounded-[var(--radius-lg)] border border-pos-border-tertiary bg-pos-bg-primary p-6">
+            <div className="ml-auto w-full rounded-(--radius-lg) border border-pos-border-tertiary bg-pos-bg-primary p-6 sm:w-80">
               <div className="flex items-center justify-between">
                 <p className="text-[14px] font-medium text-pos-text-primary">{displayId(selectedOrder)}</p>
                 <button className="text-[18px] text-pos-text-secondary" onClick={() => setSelectedId(null)}>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-client";
 import {
@@ -87,18 +88,43 @@ type SidebarProps = {
   activeItem: NavKey;
   user?: SidebarUser;
   branch?: string;
+  mobileSidebarOpen?: boolean;
+  onMobileClose?: () => void;
 };
 
 export function Sidebar({
   activeItem,
   user = defaultUser,
   branch = "Main branch",
+  mobileSidebarOpen = false,
+  onMobileClose,
 }: SidebarProps) {
   return (
-    <aside className="flex h-full flex-col gap-2 border-r border-pos-border-tertiary bg-pos-bg-secondary py-4">
+    <aside
+      className={cn(
+        "flex h-full flex-col gap-2 border-r border-pos-border-tertiary bg-pos-bg-secondary py-4",
+        // Mobile: fixed slide-over from left
+        "fixed inset-y-0 left-0 z-50 w-[220px] transition-transform duration-200 ease-in-out",
+        mobileSidebarOpen ? "translate-x-0" : "-translate-x-full",
+        // Desktop: static in grid, reset mobile overrides
+        "lg:relative lg:inset-auto lg:w-auto lg:translate-x-0",
+      )}
+    >
       <div className="px-4 pb-4">
-        <p className="text-[14px] font-medium text-pos-text-primary">GoldPOS</p>
-        <p className="mt-1 text-[13px] text-pos-text-secondary">{branch}</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[14px] font-medium text-pos-text-primary">GoldPOS</p>
+            <p className="mt-1 text-[13px] text-pos-text-secondary">{branch}</p>
+          </div>
+          {/* Mobile close button */}
+          <button
+            onClick={onMobileClose}
+            className="flex size-6 items-center justify-center rounded-md text-pos-text-secondary hover:bg-pos-bg-primary hover:text-pos-text-primary lg:hidden"
+            aria-label="Close menu"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
       </div>
       <div className="border-t border-pos-border-tertiary" />
       <nav className="flex flex-col gap-0.5 pt-2">
@@ -109,6 +135,7 @@ export function Sidebar({
             <Link
               key={item.id}
               href={item.href}
+              onClick={onMobileClose}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 text-[13px] text-pos-text-secondary transition",
                 "hover:bg-pos-bg-primary hover:text-pos-text-primary",

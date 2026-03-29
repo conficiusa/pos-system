@@ -1,5 +1,9 @@
+"use client"
+
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Sidebar, type NavKey, type SidebarUser } from "@/components/dashboard/sidebar"
+import { DashboardContext } from "@/components/dashboard/dashboard-context"
 
 type DashboardShellProps = {
   activeItem: NavKey
@@ -16,17 +20,36 @@ export function DashboardShell({
   className,
   mainClassName,
 }: DashboardShellProps) {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+
   return (
-    <div
-      className={cn(
-        "grid h-screen grid-cols-[220px_minmax(0,1fr)] overflow-hidden rounded-lg border border-pos-border-tertiary",
-        className
-      )}
-    >
-      <Sidebar activeItem={activeItem} user={user} />
-      <div className={cn("flex min-w-0 flex-col overflow-y-auto bg-pos-bg-tertiary", mainClassName)}>
-        {children}
+    <DashboardContext.Provider value={{ toggleMobileSidebar: () => setMobileSidebarOpen((v) => !v) }}>
+      <div
+        className={cn(
+          "relative h-screen overflow-hidden rounded-lg border border-pos-border-tertiary",
+          "lg:grid lg:grid-cols-[220px_minmax(0,1fr)]",
+          className,
+        )}
+      >
+        {/* Mobile backdrop */}
+        {mobileSidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
+        <Sidebar
+          activeItem={activeItem}
+          user={user}
+          mobileSidebarOpen={mobileSidebarOpen}
+          onMobileClose={() => setMobileSidebarOpen(false)}
+        />
+
+        <div className={cn("flex h-full min-w-0 flex-col overflow-y-auto bg-pos-bg-tertiary", mainClassName)}>
+          {children}
+        </div>
       </div>
-    </div>
+    </DashboardContext.Provider>
   )
 }

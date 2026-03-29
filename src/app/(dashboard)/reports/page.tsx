@@ -98,7 +98,7 @@ export default function ReportsPage() {
         title="Reports"
         subtitle="Business overview - March 2026"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {periodLabels.map((label, index) => (
               <Button
                 key={label}
@@ -126,7 +126,7 @@ export default function ReportsPage() {
       />
 
       <div className="flex flex-1 flex-col gap-5 p-5">
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {metrics.map((metric) => (
             <div
               key={metric.label}

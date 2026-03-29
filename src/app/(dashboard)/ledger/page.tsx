@@ -156,7 +156,7 @@ export default function LedgerPage() {
 
       <div className="flex flex-1 flex-col gap-4 p-5">
         {/* Metric cards */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {metrics.map((metric) => (
             <div
               key={metric.label}

@@ -397,7 +397,7 @@ export default function SettingsPage() {
                   return (
                     <div
                       key={u.id}
-                      className="flex items-center gap-3 rounded-lg border border-pos-border-tertiary bg-pos-bg-primary px-4 py-3.5 transition-colors hover:bg-pos-bg-secondary/30"
+                      className="flex flex-wrap items-center gap-3 rounded-lg border border-pos-border-tertiary bg-pos-bg-primary px-4 py-3.5 transition-colors hover:bg-pos-bg-secondary/30"
                     >
                       {/* Avatar */}
                       <div
@@ -408,7 +408,7 @@ export default function SettingsPage() {
                       </div>
 
                       {/* Info */}
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 basis-40">
                         <p className="truncate text-[13px] font-medium text-pos-text-primary">
                           {u.name}
                         </p>

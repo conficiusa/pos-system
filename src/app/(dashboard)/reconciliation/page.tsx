@@ -432,7 +432,7 @@ export default function ReconciliationPage() {
         </div>
 
         {/* Summary metrics */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {summary.map((m) => (
             <div
               key={m.label}
@@ -463,7 +463,8 @@ export default function ReconciliationPage() {
 
         {/* Order table */}
         <div className="overflow-hidden rounded-lg border border-pos-border-tertiary bg-pos-bg-primary">
-          <div className="grid grid-cols-[90px_1fr_80px_110px_100px] gap-0 border-b border-pos-border-tertiary bg-pos-bg-secondary px-5 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
+          <div className="overflow-x-auto">
+          <div className="grid min-w-115 grid-cols-[90px_1fr_80px_110px_100px] gap-0 border-b border-pos-border-tertiary bg-pos-bg-secondary px-5 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
             <span>Order</span>
             <span>Customer</span>
             <span>Weight</span>
@@ -471,6 +472,7 @@ export default function ReconciliationPage() {
             <span>Status</span>
           </div>
 
+          <div className="min-w-115">
           {ordersQuery.isLoading ? (
             Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
           ) : orders.length === 0 ? (
@@ -526,6 +528,8 @@ export default function ReconciliationPage() {
               )
             })
           )}
+          </div>
+          </div>
         </div>
 
         {/* All confirmed banner */}

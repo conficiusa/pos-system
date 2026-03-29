@@ -24,8 +24,7 @@
     "db:studio:local": "pnpm run db:init:local && drizzle-kit studio --port 4001",
     "deploy:dev": "opennextjs-cloudflare build && opennextjs-cloudflare deploy -- --keep-vars  --env=development",
     "deploy:prod": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env=production",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts --env=development",
-    "seed:admin": "pnpm exec tsx --tsconfig tsconfig.json scripts/seed-admin.ts"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts --env=development"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
