@@ -13,7 +13,7 @@
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "db:init:local": "wrangler d1 execute DB --local --env=development --command=\"SELECT 1\"",
-    "db:migration:apply:dev": "wrangler d1 migrations apply DB --remote -- --keep-vars --env=development",
+    "db:migration:apply:dev": "wrangler d1 migrations apply DB --remote --env=development",
     "db:migration:apply:local": "pnpm run db:init:local && wrangler d1 migrations apply DB --local --env=development",
     "db:migration:apply:prod": "wrangler d1 migrations apply DB --remote --env=production",
     "db:migration:generate": "drizzle-kit generate",
@@ -22,7 +22,7 @@
     "db:migration:list:prod": "wrangler d1 migrations list DB --remote --env=production",
     "db:reset:local": "rm -rf .wrangler/state/v3/d1",
     "db:studio:local": "pnpm run db:init:local && drizzle-kit studio --port 4001",
-    "deploy:dev": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env=development",
+    "deploy:dev": "opennextjs-cloudflare build && opennextjs-cloudflare deploy -- --keep-vars  --env=development",
     "deploy:prod": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env=production",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts --env=development",
     "seed:admin": "pnpm exec tsx --tsconfig tsconfig.json scripts/seed-admin.ts"

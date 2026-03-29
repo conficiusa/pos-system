@@ -30,7 +30,6 @@ export const getAuthOptions = (args: Args) => {
 
   const configOptions = {
     appName: "GoldPOS",
-    baseURL: config.baseUrl,
 
     logger: {
       disabled: !config.logsEnabled,
@@ -38,7 +37,6 @@ export const getAuthOptions = (args: Args) => {
 
     //#region Security config
     secret: config.secret,
-    trustedOrigins: [config.baseUrl],
 
     // https://www.better-auth.com/docs/concepts/session-management
     session: {

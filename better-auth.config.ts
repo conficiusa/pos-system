@@ -20,8 +20,6 @@ const authConfig = getAuthOptions({
   config: {
     ...fakeAuthConfig,
     secret: "this-is-a-fake-secret-only-used-for-cli-invocation",
-    baseUrl:
-      "https://example.com/this-is-a-fake-base-url-only-used-for-cli-invocation",
   },
 });
 export const auth = betterAuth(authConfig);

@@ -1,5 +1,4 @@
 export interface AuthConfigEnvVar {
-  baseUrl: string;
   logsEnabled: boolean;
   superAdminUserIds?: Record<string, string>;
   secret: string;
