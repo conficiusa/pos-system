@@ -77,7 +77,7 @@ async function seedLocal(data: SeedData): Promise<string> {
       image: null,
       createdAt: now,
       updatedAt: now,
-      role: "admin",
+      role: "user",
       banned: false,
       banReason: null,
       banExpires: null,
@@ -137,7 +137,7 @@ async function seedRemote(
   // Manual BEGIN/COMMIT are not supported and will cause an error.
   const sql = [
     `INSERT INTO "user" ("id","name","email","email_verified","image","created_at","updated_at","role","banned","ban_reason","ban_expires","phone")`,
-    `  VALUES ('${esc(userId)}','${esc(name)}','${esc(email)}',1,NULL,${nowMs},${nowMs},'admin',0,NULL,NULL,NULL);`,
+    `  VALUES ('${esc(userId)}','${esc(name)}','${esc(email)}',1,NULL,${nowMs},${nowMs},'user',0,NULL,NULL,NULL);`,
 
     `INSERT INTO "account" ("id","account_id","provider_id","user_id","access_token","refresh_token","id_token","access_token_expires_at","refresh_token_expires_at","scope","password","created_at","updated_at")`,
     `  VALUES ('${esc(accountId)}','${esc(userId)}','credential','${esc(userId)}',NULL,NULL,NULL,NULL,NULL,NULL,'${esc(passwordHash)}',${nowMs},${nowMs});`,

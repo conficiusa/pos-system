@@ -7,7 +7,7 @@ import type { SidebarUser } from "@/components/dashboard/sidebar";
 import { hydrateFromServer, flushSyncQueue } from "@/services/sync/idb";
 
 const STAFF_ROLES = new Set(["staff", "admin", "super-admin"]);
-const ROLE_CACHE_KEY = "goldpos_role";
+const OFFLINE_SESSION_KEY = "pos-offline-session";
 
 type SessionCtxValue = {
   sidebarUser: SidebarUser;
@@ -26,13 +26,36 @@ export function useSessionContext() {
 
 function FullScreenSpinner() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--pos-bg-secondary)]">
+    <div className="flex min-h-screen items-center justify-center bg-pos-bg-secondary">
       <div className="flex flex-col items-center gap-3">
-        <div className="size-8 animate-spin rounded-full border-2 border-[var(--pos-border-secondary)] border-t-[var(--pos-brand)]" />
-        <p className="text-[13px] text-[var(--pos-text-secondary)]">Loading…</p>
+        <div className="size-8 animate-spin rounded-full border-2 border-pos-border-secondary border-t-pos-brand" />
+        <p className="text-[13px] text-pos-text-secondary">Loading…</p>
       </div>
     </div>
   );
+}
+
+// Read a cached session from localStorage — used as an offline fallback only.
+// Returns null when online so the network session always takes precedence.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getOfflineCachedSession(): any {
+  if (typeof navigator === "undefined" || navigator.onLine) return null;
+  try {
+    const raw = localStorage.getItem(OFFLINE_SESSION_KEY);
+    if (!raw) return null;
+    const stored = JSON.parse(raw);
+    // Respect the server-issued expiry — don't grant indefinite offline access.
+    // better-auth rolls expiresAt forward on each online visit (SESSION_UPDATE_AGE),
+    // so a user who checks in every few days will always have a fresh window.
+    const expiresAt = stored?.session?.expiresAt;
+    if (expiresAt && new Date(expiresAt) < new Date()) {
+      localStorage.removeItem(OFFLINE_SESSION_KEY);
+      return null;
+    }
+    return stored;
+  } catch {
+    return null;
+  }
 }
 
 export function SessionGuard({ children }: { children: React.ReactNode }) {
@@ -43,40 +66,41 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
   const [primaryRole, setPrimaryRole] = useState<string | null>(null);
   const bootedRef = useRef(false);
 
+  // Persist session to localStorage whenever it's available so it can be
+  // used as a fallback when the device is offline.
   useEffect(() => {
-    if (!isPending && !session) {
-      router.replace("/login");
+    if (session) {
+      try {
+        localStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify(session));
+      } catch {}
     }
-  }, [isPending, session, router]);
+  }, [session]);
+
+  // Derive effective session: prefer the live network session; fall back to
+  // the localStorage copy only when the network fetch has finished and failed
+  // while the device is offline.
+  const offlineFallback = !isPending && !session ? getOfflineCachedSession() : null;
+  const effectiveSession = session ?? offlineFallback;
 
   useEffect(() => {
-    if (!session) return;
-    const cacheKey = `${ROLE_CACHE_KEY}_${session.user.id}`;
-    fetch("/api/me/roles")
-      .then((r) => r.json())
-      .then((data) => {
-        const { roles } = data as { roles: string[] };
-        const granted = roles.find((r) => STAFF_ROLES.has(r)) ?? null;
-        if (granted) {
-          sessionStorage.setItem(cacheKey, granted);
-          setPrimaryRole(granted);
-          setHasAccess(true);
-        } else {
-          sessionStorage.removeItem(cacheKey);
-          router.replace("/pending");
-        }
-      })
-      .catch(() => {
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          setPrimaryRole(cached);
-          setHasAccess(true);
-        } else {
-          router.replace("/pending");
-        }
-      })
-      .finally(() => setRolesChecked(true));
-  }, [session, router]);
+    if (isPending) return;
+    if (!effectiveSession) {
+      router.replace("/login");
+    }
+  }, [isPending, effectiveSession, router]);
+
+  useEffect(() => {
+    if (!effectiveSession) return;
+    const roles = (effectiveSession.user.roles ?? []) as string[];
+    const granted = roles.find((r: string) => STAFF_ROLES.has(r)) ?? null;
+    if (granted) {
+      setPrimaryRole(granted);
+      setHasAccess(true);
+    } else {
+      router.replace("/pending");
+    }
+    setRolesChecked(true);
+  }, [effectiveSession, router]);
 
   useEffect(() => {
     if (!hasAccess || bootedRef.current) return;
@@ -92,26 +116,24 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
     })();
   }, [hasAccess]);
 
-  if (isPending || !session || !rolesChecked || !hasAccess) {
+  if (isPending || !effectiveSession || !rolesChecked || !hasAccess) {
     return <FullScreenSpinner />;
   }
 
   const sidebarUser: SidebarUser = {
-    name: session.user.name ?? "User",
+    name: effectiveSession.user.name ?? "User",
     role: primaryRole ?? "Staff",
-    initials: (session.user.name ?? "U")
+    initials: (effectiveSession.user.name ?? "U")
       .split(" ")
-      .map((p) => p[0])
+      .map((p: string) => p[0])
       .join("")
       .slice(0, 2)
       .toUpperCase(),
   };
 
-  const userRole = primaryRole;
-
   return (
     <SessionCtx.Provider
-      value={{ sidebarUser, userId: session.user.id, userRole }}
+      value={{ sidebarUser, userId: effectiveSession.user.id, userRole: primaryRole }}
     >
       {children}
     </SessionCtx.Provider>

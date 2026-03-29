@@ -3,7 +3,7 @@ declare const self: ServiceWorkerGlobalScope;
 
 // Must match the tag registered in idb.ts when queuing a background sync
 const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v1";
+const CACHE_NAME = "goldpos-shell-v2";
 
 // App shell — pages that should be available offline
 const SHELL_URLS = [
@@ -12,6 +12,7 @@ const SHELL_URLS = [
   "/orders",
   "/ledger",
   "/reports",
+  "/login",
   "/manifest.json",
 ];
 
@@ -21,7 +22,10 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(SHELL_URLS))
+      // Ignore individual failures so one bad URL doesn't block the install
+      .then((cache) =>
+        Promise.all(SHELL_URLS.map((url) => cache.add(url).catch(() => {}))),
+      )
       .then(() => self.skipWaiting()),
   );
 });

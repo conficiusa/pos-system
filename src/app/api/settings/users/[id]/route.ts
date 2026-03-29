@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
 import { auth } from "@/lib/auth"
-import { AccessService } from "@/services/access/access.service"
 import { canPerformSettingsAction } from "@/services/settings/settings.permissions"
 import { user as userTable } from "@/lib/db/schemas/better-auth.schema"
 import { userRole, userRoleChangelog } from "@/lib/db/schemas/access.schema"
@@ -24,9 +23,7 @@ export async function DELETE(
   }
 
   const db = getDb()
-  const accessService = new AccessService(db)
-  const roles = await accessService.getUserRoles(session.user.id)
-  const actor = { id: session.user.id, roles, activeOrg: null, emailVerified: session.user.emailVerified }
+  const actor = { id: session.user.id, roles: session.user.roles ?? [], activeOrg: null, emailVerified: session.user.emailVerified }
 
   const canDelete = canPerformSettingsAction({
     user: actor,

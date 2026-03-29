@@ -12,14 +12,16 @@ import {
 import * as betterAuthSchemas from "@/lib/db/schemas/better-auth.schema";
 import { AuthConfigEnvVar } from "@/lib/get-env";
 import { DB } from "./db";
+import { AccessService } from "@/services/access/access.service";
 
 type Args = {
   db: DB;
   config: AuthConfigEnvVar;
+  accessService: AccessService;
 };
 
 export const getAuthOptions = (args: Args) => {
-  const { db, config } = args;
+  const { db, config, accessService } = args;
 
   const database = drizzleAdapter(db, {
     // The provider is set to "sqlite" for Cloudflare D1 databases.
@@ -124,11 +126,10 @@ const adminPlugin = (args: { config: AuthConfigEnvVar }) => {
 
 const customSessionPlugin = (args: Args) => {
   return customSession(async ({ user, session }) => {
+    const roles = await args.accessService.getUserRoles(user.id);
     return {
-      user: { ...user },
-      session: session as typeof session & {
-        activeGroupId?: string;
-      },
+      user: { ...user, roles },
+      session: session as typeof session & {},
     };
   });
 };

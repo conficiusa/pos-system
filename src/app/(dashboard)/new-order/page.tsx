@@ -357,7 +357,7 @@ function NewOrderInner() {
                       disabled={isSubmitting || submitted}
                       className="h-9 w-full rounded-[var(--radius-md)] bg-pos-brand text-[13px] font-medium text-white hover:bg-pos-brand-dark"
                     >
-                      {submitted ? "Order saved!" : isSubmitting ? "Saving..." : "Proceed to payment"}
+                      {submitted ? "Order saved!" : isSubmitting ? "Saving..." : "Confirm transaction"}
                     </Button>
                   </div>
                 </>

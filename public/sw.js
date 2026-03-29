@@ -1,8 +1,27 @@
 const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v1";
+const CACHE_NAME = "goldpos-shell-v2";
+
+// App shell — pre-cached on SW install so the app works offline immediately
+const SHELL_URLS = [
+  "/",
+  "/customers",
+  "/orders",
+  "/ledger",
+  "/reports",
+  "/login",
+  "/manifest.json",
+];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(self.skipWaiting());
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      // Ignore individual failures so one bad URL doesn't block the install
+      .then((cache) =>
+        Promise.all(SHELL_URLS.map((url) => cache.add(url).catch(() => {})))
+      )
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {

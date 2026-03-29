@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn, exportXlsx, fmtGHS } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
+import { printOrderReceipt } from "@/lib/print-receipt"
 
 type OrderWithCustomer = {
   id: string
@@ -109,7 +110,7 @@ export default function OrdersPage() {
 
   const metrics = [
     { label: "This week", value: stats ? stats.total + " orders" : "— orders" },
-    { label: "Pending reconciliation", value: stats ? String(stats.pending) : "—", valueClass: "text-pos-warning" },
+    { label: "Pending reconciliation", value: stats ? String(stats.pending ?? 0) : "—", valueClass: "text-pos-warning" },
     { label: "Total paid out", value: stats ? "GHS " + stats.totalPaid.toLocaleString() : "GHS —" },
     { label: "Avg. order value", value: stats ? "GHS " + Math.round(stats.avgOrder).toLocaleString() : "GHS —" },
   ]
@@ -271,9 +272,10 @@ export default function OrdersPage() {
               </div>
               <Button
                 variant="outline"
+                onClick={() => printOrderReceipt(selectedOrder)}
                 className="mt-4 h-8 w-full rounded-[var(--radius-md)] border-pos-border-secondary bg-pos-bg-primary text-[12px] font-medium text-pos-text-primary"
               >
-                Reprint receipt
+                Print receipt
               </Button>
             </div>
           </div>

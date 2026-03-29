@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
 import { auth } from "@/lib/auth"
-import { AccessService } from "@/services/access/access.service"
 import { canPerformSettingsAction } from "@/services/settings/settings.permissions"
 import { user as userTable } from "@/lib/db/schemas/better-auth.schema"
 import { userRole } from "@/lib/db/schemas/access.schema"
@@ -15,14 +14,12 @@ async function getActorWithPermission(request: NextRequest) {
   if (!session) return null
 
   const db = getDb()
-  const accessService = new AccessService(db)
-  const roles = await accessService.getUserRoles(session.user.id)
-  const actor = { id: session.user.id, roles, activeOrg: null, emailVerified: session.user.emailVerified }
+  const actor = { id: session.user.id, roles: session.user.roles ?? [], activeOrg: null, emailVerified: session.user.emailVerified }
 
   const canView = canPerformSettingsAction({ user: actor, resource: "user", action: "view" })
   if (!canView) return null
 
-  return { session, actor, db, accessService }
+  return { session, actor, db }
 }
 
 export async function GET(request: NextRequest) {
@@ -66,9 +63,7 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const db = getDb()
-  const accessService = new AccessService(db)
-  const roles = await accessService.getUserRoles(session.user.id)
-  const actor = { id: session.user.id, roles, activeOrg: null, emailVerified: session.user.emailVerified }
+  const actor = { id: session.user.id, roles: session.user.roles ?? [], activeOrg: null, emailVerified: session.user.emailVerified }
 
   const canCreate = canPerformSettingsAction({ user: actor, resource: "user", action: "create" })
   if (!canCreate) return NextResponse.json({ error: "Forbidden" }, { status: 403 })

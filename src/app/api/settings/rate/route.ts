@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
 import { auth } from "@/lib/auth"
-import { AccessService } from "@/services/access/access.service"
 import { canPerformSettingsAction } from "@/services/settings/settings.permissions"
 import { appSettings } from "@/lib/db/schemas/app-settings.schema"
 import { user } from "@/lib/db/schemas/better-auth.schema"
@@ -46,9 +45,7 @@ export async function PUT(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const db = getDb()
-  const accessService = new AccessService(db)
-  const roles = await accessService.getUserRoles(session.user.id)
-  const actor = { id: session.user.id, roles, activeOrg: null, emailVerified: session.user.emailVerified }
+  const actor = { id: session.user.id, roles: session.user.roles ?? [], activeOrg: null, emailVerified: session.user.emailVerified }
 
   // Only admins can update the rate
   const canUpdate = canPerformSettingsAction({ user: actor, resource: "user", action: "create" })

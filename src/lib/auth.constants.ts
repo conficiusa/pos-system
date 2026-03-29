@@ -13,8 +13,11 @@ export const COOKIE_CROSS_SUBDOMAIN_ENABLED = true;
 export const SESSION_FRESH_AGE = 60 * 60 * 4; // 4 hours
 
 // https://www.better-auth.com/docs/concepts/session-management#session-expiration
+// Fixed (non-rolling) session: expiresAt is set once at login and never extended.
+// This aligns the server cookie, the DB record, and the localStorage offline cache
+// on a single known deadline — 7 days from the moment the session was created.
 export const SESSION_EXPIRES_AFTER = 60 * 60 * 24 * 7; // 7 days
-export const SESSION_UPDATE_AGE = 60 * 60 * 24; // 1 day (every 1 day the session expiration is updated)
+export const SESSION_UPDATE_AGE = 0; // 0 = disabled (fixed session)
 
 export const JWT_EXPIRES_AFTER: `${number}${"s" | "m" | "h"}` = "1h";
 
