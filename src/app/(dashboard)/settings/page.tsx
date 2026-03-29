@@ -606,7 +606,6 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="create-phone">
                 Phone{" "}
-                <span className="font-normal text-pos-text-secondary">(optional)</span>
               </Label>
               <Input
                 id="create-phone"
@@ -614,6 +613,7 @@ export default function SettingsPage() {
                 value={createPhone}
                 onChange={(e) => setCreatePhone(e.target.value)}
                 placeholder="+233 XX XXX XXXX"
+                required
               />
             </div>
             {createError && <p className="text-[12px] text-red-500">{createError}</p>}
