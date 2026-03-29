@@ -3,7 +3,7 @@ declare const self: ServiceWorkerGlobalScope;
 
 // Must match the tag registered in idb.ts when queuing a background sync
 const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v2";
+const CACHE_NAME = "goldpos-shell-v3";
 
 // App shell — pages that should be available offline
 const SHELL_URLS = [
@@ -59,10 +59,73 @@ self.addEventListener("fetch", (event) => {
   // Never intercept API calls — let idb.ts handle offline writes
   if (url.pathname.startsWith("/api/")) return;
 
-  // Next.js internal routes — pass through
+  // Next.js static assets (immutable, content-hashed) — cache first
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ??
+          fetch(request)
+            .then((res) => {
+              if (res.ok) {
+                const clone = res.clone();
+                caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+              }
+              return res;
+            })
+            .catch(() => new Response("", { status: 503 })),
+      ),
+    );
+    return;
+  }
+
+  // Other _next paths — network first, cache fallback
   if (url.pathname.startsWith("/_next/")) {
     event.respondWith(
-      fetch(request).catch(() => new Response("", { status: 503 })),
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches
+            .match(request)
+            .then((cached) => cached ?? new Response("", { status: 503 })),
+        ),
+    );
+    return;
+  }
+
+  // RSC requests (client-side navigations via React Server Components)
+  // These are fetch-mode requests with ?_rsc= that expect RSC payload.
+  // When offline, fall back to the cached HTML for that pathname so the
+  // browser does a full-page render from the app shell.
+  if (url.searchParams.has("_rsc")) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => {
+          const stripped = new Request(url.pathname, {
+            headers: request.headers,
+          });
+          return caches
+            .match(stripped)
+            .then((cached) => cached ?? caches.match("/"))
+            .then(
+              (fallback) =>
+                fallback ??
+                new Response("Offline — please reconnect", { status: 503 }),
+            );
+        }),
     );
     return;
   }
@@ -98,13 +161,15 @@ self.addEventListener("fetch", (event) => {
     caches.match(request).then(
       (cached) =>
         cached ??
-        fetch(request).then((res) => {
-          if (res.ok && res.type === "basic") {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
-          }
-          return res;
-        }),
+        fetch(request)
+          .then((res) => {
+            if (res.ok && res.type === "basic") {
+              const clone = res.clone();
+              caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+            }
+            return res;
+          })
+          .catch(() => new Response("", { status: 503 })),
     ),
   );
 });
@@ -112,19 +177,18 @@ self.addEventListener("fetch", (event) => {
 // ─── Background sync ──────────────────────────────────────────────────────────
 // Fired by the browser when connectivity is restored after the app registered
 // a sync via `registration.sync.register(SYNC_TAG)`.
-// We call the server-side flush endpoint which reads unsynced rows from D1
-// sync_queue and routes them through the Durable Object.
+// Tell active clients to flush their IDB queue (they have the auth token).
 
 self.addEventListener("sync", (event) => {
   if (event.tag === SYNC_TAG) {
     event.waitUntil(
-      fetch("/api/sync/flush", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // No body needed — flush endpoint reads from D1 sync_queue directly
-      }).catch(() => {
-        // Silent failure — browser will retry on next connectivity event
-      }),
+      self.clients
+        .matchAll({ type: "window", includeUncontrolled: true })
+        .then((clients) =>
+          clients.forEach((client) =>
+            client.postMessage({ type: "SW_SYNC_REQUESTED" }),
+          ),
+        ),
     );
   }
 });

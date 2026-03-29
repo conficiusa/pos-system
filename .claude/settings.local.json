@@ -4,7 +4,27 @@
       "Bash(head:*)",
       "Bash(pnpm build:*)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\(''''dependencies'''',{}\\), **d.get\\(''''devDependencies'''',{}\\)}; [print\\(k,v\\) for k,v in deps.items\\(\\)]\")",
-      "Bash(npx opennextjs-cloudflare:*use pnpm)"
+      "Bash(pnpm exec:*)",
+      "Bash(xargs ls:*)",
+      "Bash(sort -k5 -rh)",
+      "Bash(grep -rn kysely /home/conficius/projects/pos-system/src --include=*.ts --include=*.tsx -l)",
+      "Bash(grep -rn from.*recharts /home/conficius/projects/pos-system/src --include=*.ts --include=*.tsx)",
+      "Bash(du:*)",
+      "Skill(update-config)",
+      "Bash(grep -r defineCloudflareConfig /home/conficius/projects/pos-system/node_modules/.pnpm/@opennextjs+cloudflare@1.17.3*/node_modules/@opennextjs/cloudflare/dist/index.js)",
+      "Bash(find /home/conficius/projects/pos-system/node_modules/.pnpm/@opennextjs+cloudflare@1.17.3*/node_modules/@opennextjs/cloudflare/dist -name *.d.ts)",
+      "Bash(find:*)",
+      "Bash(grep -r \"bundleExternals\\\\|esbuildOptions\\\\|ignorePackages\\\\|externals\" /home/conficius/projects/pos-system/node_modules/.pnpm/@opennextjs+cloudflare@1.17.3*/node_modules/@opennextjs/cloudflare/dist/build/bundle-server.js)",
+      "Bash(grep -n \"esbuild\\\\|external\\\\|ignore\\\\|plugin\\\\|vercel\\\\|og\" /home/conficius/projects/pos-system/node_modules/.pnpm/@opennextjs+cloudflare@1.17.3*/node_modules/@opennextjs/cloudflare/dist/cli/commands/build.js)",
+      "Bash(grep -n \"esbuildOptions\\\\|external\\\\|plugins\\\\|ignorePackage\" /home/conficius/projects/pos-system/node_modules/.pnpm/@opennextjs+aws@3.9.16*/node_modules/@opennextjs/aws/dist/build/bundleNextServer.js)",
+      "Bash(grep -o vercel/og[^'']* /home/conficius/projects/pos-system/.open-next/server-functions/default/handler.mjs)",
+      "Bash(dd:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm run:*)",
+      "Bash(wrangler deploy:*)",
+      "Bash(pnpm wrangler:*)",
+      "Bash(ls:*)"
     ]
   }
 }

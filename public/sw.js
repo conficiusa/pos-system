@@ -1,5 +1,5 @@
 const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v2";
+const CACHE_NAME = "goldpos-shell-v3";
 
 // App shell — pre-cached on SW install so the app works offline immediately
 const SHELL_URLS = [
@@ -45,13 +45,74 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Never intercept API calls
+  // Never intercept API calls — let idb.ts handle offline writes
   if (url.pathname.startsWith("/api/")) return;
 
-  // Next.js internals — network only
+  // Next.js static assets (immutable, content-hashed) — cache first
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ??
+          fetch(request)
+            .then((res) => {
+              if (res.ok) {
+                const clone = res.clone();
+                caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+              }
+              return res;
+            })
+            .catch(() => new Response("", { status: 503 }))
+      )
+    );
+    return;
+  }
+
+  // Other _next paths — network first, cache fallback
   if (url.pathname.startsWith("/_next/")) {
     event.respondWith(
-      fetch(request).catch(() => new Response("", { status: 503 }))
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches
+            .match(request)
+            .then((cached) => cached ?? new Response("", { status: 503 }))
+        )
+    );
+    return;
+  }
+
+  // RSC requests (client-side navigations via React Server Components)
+  // These are fetch-mode requests with ?_rsc= that expect RSC payload.
+  // When offline, fall back to the cached HTML for that pathname so the
+  // browser does a full-page render from the app shell.
+  if (url.searchParams.has("_rsc")) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => {
+          var stripped = new Request(url.pathname, { headers: request.headers });
+          return caches
+            .match(stripped)
+            .then((cached) => cached ?? caches.match("/"))
+            .then(
+              (fallback) =>
+                fallback ??
+                new Response("Offline — please reconnect", { status: 503 })
+            );
+        })
     );
     return;
   }
@@ -81,18 +142,20 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets — cache first
+  // Static assets — cache first, network fallback
   event.respondWith(
     caches.match(request).then(
       (cached) =>
         cached ??
-        fetch(request).then((res) => {
-          if (res.ok && res.type === "basic") {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
-          }
-          return res;
-        })
+        fetch(request)
+          .then((res) => {
+            if (res.ok && res.type === "basic") {
+              const clone = res.clone();
+              caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+            }
+            return res;
+          })
+          .catch(() => new Response("", { status: 503 }))
     )
   );
 });
