@@ -34,8 +34,7 @@ import { nanoid } from "nanoid";
 import { execSync } from "node:child_process";
 import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-
-import * as schema from "../src/lib/db/schemas/index.js";
+import { account, user, userRole, userRoleChangelog } from "@/lib/db/schemas";
 
 type Target = "local" | "development" | "production";
 
@@ -63,12 +62,12 @@ async function seedLocal(data: SeedData): Promise<string> {
   const sqlitePath = d1.sqliteLocalFileCredentials.url;
 
   const client = createClient({ url: `file:${sqlitePath}` });
-  const db = drizzle(client, { schema });
+  const db = drizzle(client, {});
 
   const existing = await db
-    .select({ id: schema.user.id })
-    .from(schema.user)
-    .where(eq(schema.user.email, data.email.toLowerCase()))
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, data.email.toLowerCase()))
     .get();
 
   if (existing) {
@@ -81,7 +80,7 @@ async function seedLocal(data: SeedData): Promise<string> {
   const passwordHash = await hashPassword(data.password);
 
   await db.transaction(async (tx) => {
-    await tx.insert(schema.user).values({
+    await tx.insert(user).values({
       id: userId,
       name: data.name.trim(),
       email: data.email.toLowerCase().trim(),
@@ -96,7 +95,7 @@ async function seedLocal(data: SeedData): Promise<string> {
       phone: null,
     });
 
-    await tx.insert(schema.account).values({
+    await tx.insert(account).values({
       id: nanoid(),
       accountId: userId,
       providerId: "credential",
@@ -112,14 +111,14 @@ async function seedLocal(data: SeedData): Promise<string> {
       updatedAt: now,
     });
 
-    await tx.insert(schema.userRole).values({
+    await tx.insert(userRole).values({
       userId,
       role: "admin",
       createdAt: now,
       actorId: userId,
     });
 
-    await tx.insert(schema.userRoleChangelog).values({
+    await tx.insert(userRoleChangelog).values({
       userId,
       role: "admin",
       action: "grant",

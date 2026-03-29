@@ -3,7 +3,8 @@
     "allow": [
       "Bash(head:*)",
       "Bash(pnpm build:*)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\(''''dependencies'''',{}\\), **d.get\\(''''devDependencies'''',{}\\)}; [print\\(k,v\\) for k,v in deps.items\\(\\)]\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); deps={**d.get\\(''''dependencies'''',{}\\), **d.get\\(''''devDependencies'''',{}\\)}; [print\\(k,v\\) for k,v in deps.items\\(\\)]\")",
+      "Bash(npx opennextjs-cloudflare:*use pnpm)"
     ]
   }
 }
