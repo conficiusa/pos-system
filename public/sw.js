@@ -9,7 +9,7 @@
 //   everything else  → CacheFirst with network fallback
 
 const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v5";
+const CACHE_NAME = "goldpos-shell-v6";
 
 // Static assets that are safe to pre-cache during install.
 // Do NOT include auth-protected HTML pages here — they may not be
@@ -150,7 +150,7 @@ self.addEventListener("fetch", (event) => {
 
   // ── Navigation requests (full page loads) — NetworkFirst ─────────────────
   // Cache the response so it is available for future offline navigations.
-  // Fallback chain: cached version of the exact page → cached "/" → error.
+  // Fallback chain: cached version of the exact page → error.
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -161,22 +161,19 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
         .catch(() =>
-          caches
-            .match(request)
-            .then((cached) => cached ?? caches.match("/"))
-            .then(
-              (fallback) =>
-                fallback ??
-                new Response(
-                  "<!doctype html><html><head><title>Offline</title></head><body>" +
-                    "<p style='font-family:sans-serif;padding:2rem'>You are offline. " +
-                    "Please reconnect to access GoldPOS.</p></body></html>",
-                  {
-                    status: 503,
-                    headers: { "Content-Type": "text/html" },
-                  },
-                ),
-            ),
+          caches.match(request).then(
+            (fallback) =>
+              fallback ??
+              new Response(
+                "<!doctype html><html><head><title>Offline</title></head><body>" +
+                  "<p style='font-family:sans-serif;padding:2rem'>You are offline. " +
+                  "Please reconnect to access GoldPOS.</p></body></html>",
+                {
+                  status: 503,
+                  headers: { "Content-Type": "text/html" },
+                },
+              ),
+          ),
         ),
     );
     return;

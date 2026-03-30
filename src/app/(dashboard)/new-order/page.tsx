@@ -1,51 +1,79 @@
-"use client"
+"use client";
 
-import { Suspense, useEffect, useRef, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useQuery } from "@tanstack/react-query"
-import { DashboardShell } from "@/components/dashboard/dashboard-shell"
-import { IconBack, IconSearch } from "@/components/dashboard/icons"
-import { SectionLabel } from "@/components/dashboard/section-label"
-import { Topbar } from "@/components/dashboard/topbar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { cn, fmtGHS } from "@/lib/utils"
-import { useSessionContext } from "@/components/dashboard/session-guard"
-import { localWrite, localGetAll, localGetById } from "@/services/sync/idb"
-import { nanoid } from "nanoid"
-import type { Customer, Order } from "@/lib/db/schemas"
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { IconBack, IconSearch } from "@/components/dashboard/icons";
+import { SectionLabel } from "@/components/dashboard/section-label";
+import { Topbar } from "@/components/dashboard/topbar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn, fmtGHS } from "@/lib/utils";
+import { useSessionContext } from "@/components/dashboard/session-guard";
+import { useNetworkStatus } from "@/hooks/use-network-status";
+import { localWrite, localGetAll, localGetById } from "@/services/sync/idb";
+import { nanoid } from "nanoid";
+import type { Customer, Order } from "@/lib/db/schemas";
+
+const CACHED_RATE_KEY = "pos-cached-rate";
+const DEFAULT_RATE = 380;
 
 const initials = (name: string) =>
-  name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+  name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+const readCachedRate = () => {
+  if (typeof window === "undefined") return DEFAULT_RATE;
+  const cached = Number(localStorage.getItem(CACHED_RATE_KEY));
+  return Number.isFinite(cached) && cached > 0 ? cached : DEFAULT_RATE;
+};
+
+const writeCachedRate = (rate: number) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CACHED_RATE_KEY, String(rate));
+  } catch {}
+};
 
 function NewOrderInner() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { sidebarUser, userId } = useSessionContext()
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { sidebarUser, userId } = useSessionContext();
+  const { isOnline } = useNetworkStatus();
 
   // Customer selection
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
     searchParams.get("customerId"),
-  )
-  const [showPicker, setShowPicker] = useState(!searchParams.get("customerId"))
-  const [customerSearch, setCustomerSearch] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  );
+  const [showPicker, setShowPicker] = useState(!searchParams.get("customerId"));
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setDebouncedSearch(customerSearch), 280)
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [customerSearch])
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(
+      () => setDebouncedSearch(customerSearch),
+      280,
+    );
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [customerSearch]);
 
   // Order fields
-  const [orderId] = useState(() => nanoid())
-  const [weightGrams, setWeightGrams] = useState("")
-  const [estimatedRate, setEstimatedRate] = useState("")
-  const [rateUserEdited, setRateUserEdited] = useState(false)
-  const [notes, setNotes] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [orderId] = useState(() => nanoid());
+  const [weightGrams, setWeightGrams] = useState("");
+  const [estimatedRate, setEstimatedRate] = useState("");
+  const [rateUserEdited, setRateUserEdited] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   // Queries
   const customerListQuery = useQuery({
@@ -53,47 +81,52 @@ function NewOrderInner() {
     queryFn: async () => {
       const url = debouncedSearch
         ? `/api/customers?q=${encodeURIComponent(debouncedSearch)}`
-        : "/api/customers"
+        : "/api/customers";
       try {
-        const res = await fetch(url)
-        if (!res.ok) throw new Error(res.statusText)
-        return res.json() as Promise<{ data: Customer[] }>
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(res.statusText);
+        return res.json() as Promise<{ data: Customer[] }>;
       } catch {
         // Offline fallback: read from IndexedDB and filter client-side.
-        let customers = await localGetAll("customers")
+        let customers = await localGetAll("customers");
         if (debouncedSearch) {
-          const q = debouncedSearch.toLowerCase()
+          const q = debouncedSearch.toLowerCase();
           customers = customers.filter(
             (c) =>
               c.name.toLowerCase().includes(q) ||
               c.phone.toLowerCase().includes(q),
-          )
+          );
         }
-        return { data: customers as Customer[] }
+        return { data: customers as Customer[] };
       }
     },
     enabled: showPicker,
-  })
+  });
 
   const customerQuery = useQuery({
     queryKey: ["customer", selectedCustomerId],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/customers/${selectedCustomerId}`)
-        if (!res.ok) throw new Error(res.statusText)
+        const res = await fetch(`/api/customers/${selectedCustomerId}`);
+        if (!res.ok) throw new Error(res.statusText);
         return res.json() as Promise<{
-          customer: Customer
-          orderCount: number
-          totalPaid: number
-          recentOrders: Order[]
-        }>
+          customer: Customer;
+          orderCount: number;
+          totalPaid: number;
+          recentOrders: Order[];
+        }>;
       } catch {
         // Offline fallback: assemble the customer detail from IDB.
-        const customer = await localGetById("customers", selectedCustomerId!)
-        if (!customer) return null
-        const orders = await localGetAll("orders")
-        const customerOrders = orders.filter((o) => o.customerId === customer.id)
-        const totalPaid = customerOrders.reduce((sum, o) => sum + o.amountPaid, 0)
+        const customer = await localGetById("customers", selectedCustomerId!);
+        if (!customer) return null;
+        const orders = await localGetAll("orders");
+        const customerOrders = orders.filter(
+          (o) => o.customerId === customer.id,
+        );
+        const totalPaid = customerOrders.reduce(
+          (sum, o) => sum + o.amountPaid,
+          0,
+        );
         return {
           customer,
           orderCount: customerOrders.length,
@@ -101,45 +134,55 @@ function NewOrderInner() {
           recentOrders: customerOrders
             .sort(
               (a, b) =>
-                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime(),
             )
             .slice(0, 5),
-        }
+        };
       }
     },
     enabled: !!selectedCustomerId,
-  })
-  const customer = customerQuery.data ?? null
+  });
+  const customer = customerQuery.data ?? null;
 
   const rateQuery = useQuery({
     queryKey: ["current-rate"],
-    queryFn: () =>
-      fetch("/api/settings/rate").then((r) => r.json() as Promise<{ rate: number }>),
-  })
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/settings/rate");
+        if (!res.ok) throw new Error(res.statusText);
+        const data = (await res.json()) as { rate: number };
+        writeCachedRate(data.rate);
+        return data;
+      } catch {
+        return { rate: readCachedRate() };
+      }
+    },
+  });
 
   useEffect(() => {
     if (rateQuery.data && !rateUserEdited) {
-      setEstimatedRate(String(rateQuery.data.rate))
+      setEstimatedRate(String(rateQuery.data.rate));
     }
-  }, [rateQuery.data, rateUserEdited])
+  }, [rateQuery.data, rateUserEdited]);
 
-  const weight = parseFloat(weightGrams) || 0
-  const rate = parseFloat(estimatedRate) || 0
-  const estimatedValue = weight * rate
-  const ledgerAdjustment = customer?.customer.ledgerBalance ?? 0
-  const amountPaid = estimatedValue + ledgerAdjustment
+  const weight = parseFloat(weightGrams) || 0;
+  const rate = parseFloat(estimatedRate) || 0;
+  const estimatedValue = weight * rate;
+  const ledgerAdjustment = customer?.customer.ledgerBalance ?? 0;
+  const amountPaid = estimatedValue + ledgerAdjustment;
 
   const handleSelectCustomer = (c: Customer) => {
-    setSelectedCustomerId(c.id)
-    setShowPicker(false)
-    setCustomerSearch("")
-  }
+    setSelectedCustomerId(c.id);
+    setShowPicker(false);
+    setCustomerSearch("");
+  };
 
   const handleSubmit = async () => {
-    if (isSubmitting || submitted || !selectedCustomerId) return
-    setIsSubmitting(true)
+    if (isSubmitting || submitted || !selectedCustomerId) return;
+    setIsSubmitting(true);
     try {
-      const now = new Date().toISOString()
+      const now = new Date().toISOString();
       const newOrder = {
         id: orderId,
         customerId: selectedCustomerId,
@@ -153,18 +196,18 @@ function NewOrderInner() {
         status: "pending" as const,
         createdAt: now,
         updatedAt: now,
-      }
-      await localWrite("orders", "insert", newOrder)
-      setSubmitted(true)
-      setTimeout(() => router.push("/"), 1500)
+      };
+      await localWrite("orders", "insert", newOrder);
+      setSubmitted(true);
+      setTimeout(() => router.push(isOnline ? "/" : "/customers"), 1500);
     } catch {
       // silently fail
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  const customerList = customerListQuery.data?.data ?? []
+  const customerList = customerListQuery.data?.data ?? [];
 
   return (
     <DashboardShell activeItem="new-order" user={sidebarUser}>
@@ -187,12 +230,10 @@ function NewOrderInner() {
 
       <div className="grid flex-1 gap-5 p-5 lg:grid-cols-[1fr_300px]">
         <div className="flex flex-col gap-4">
-
           {/* ── Customer section ─────────────────────────────────────── */}
           <div>
             <SectionLabel>Customer</SectionLabel>
             <div className="mt-2 overflow-hidden rounded-[var(--radius-lg)] border border-pos-border-tertiary bg-pos-bg-primary">
-
               {showPicker ? (
                 /* Inline customer picker */
                 <div className="flex flex-col">
@@ -209,7 +250,10 @@ function NewOrderInner() {
                   <div className="max-h-56 overflow-y-auto">
                     {customerListQuery.isLoading ? (
                       Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="flex items-center gap-3 border-b border-pos-border-tertiary px-4 py-3">
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 border-b border-pos-border-tertiary px-4 py-3"
+                        >
                           <span className="size-8 animate-pulse rounded-full bg-pos-bg-secondary" />
                           <div className="flex-1 space-y-1.5">
                             <span className="block h-3.5 w-28 animate-pulse rounded bg-pos-bg-secondary" />
@@ -223,7 +267,7 @@ function NewOrderInner() {
                       </p>
                     ) : (
                       customerList.map((c) => {
-                        const bal = c.ledgerBalance ?? 0
+                        const bal = c.ledgerBalance ?? 0;
                         return (
                           <button
                             key={c.id}
@@ -234,21 +278,28 @@ function NewOrderInner() {
                               {initials(c.name)}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[13px] font-medium text-pos-text-primary">{c.name}</p>
-                              <p className="text-[11px] text-pos-text-secondary">{c.phone}</p>
+                              <p className="truncate text-[13px] font-medium text-pos-text-primary">
+                                {c.name}
+                              </p>
+                              <p className="text-[11px] text-pos-text-secondary">
+                                {c.phone}
+                              </p>
                             </div>
                             {bal !== 0 && (
                               <span
                                 className={cn(
                                   "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                                  bal > 0 ? "bg-pos-success-soft text-pos-success" : "bg-pos-danger-soft text-pos-danger",
+                                  bal > 0
+                                    ? "bg-pos-success-soft text-pos-success"
+                                    : "bg-pos-danger-soft text-pos-danger",
                                 )}
                               >
-                                {bal > 0 ? "+" : "-"}GHS {Math.abs(bal).toFixed(2)}
+                                {bal > 0 ? "+" : "-"}GHS{" "}
+                                {Math.abs(bal).toFixed(2)}
                               </span>
                             )}
                           </button>
-                        )
+                        );
                       })
                     )}
                   </div>
@@ -282,7 +333,10 @@ function NewOrderInner() {
                       </span>
                     )}
                     <button
-                      onClick={() => { setShowPicker(true); setSelectedCustomerId(null) }}
+                      onClick={() => {
+                        setShowPicker(true);
+                        setSelectedCustomerId(null);
+                      }}
                       className="rounded-[var(--radius-md)] border border-pos-border-tertiary px-3 py-1 text-[12px] text-pos-text-secondary hover:bg-pos-bg-secondary"
                     >
                       Change
@@ -297,10 +351,13 @@ function NewOrderInner() {
                       }`}
                     >
                       <span>
-                        {ledgerAdjustment > 0 ? "Credit from previous order" : "Arrears from previous order"}
+                        {ledgerAdjustment > 0
+                          ? "Credit from previous order"
+                          : "Arrears from previous order"}
                       </span>
                       <span className="font-medium">
-                        {ledgerAdjustment > 0 ? "+ " : "- "}GHS {Math.abs(ledgerAdjustment).toFixed(2)}
+                        {ledgerAdjustment > 0 ? "+ " : "- "}GHS{" "}
+                        {Math.abs(ledgerAdjustment).toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -315,7 +372,9 @@ function NewOrderInner() {
             <div className="mt-2 rounded-[var(--radius-lg)] border border-pos-border-tertiary bg-pos-bg-primary p-5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[12px] text-pos-text-secondary">Weight (grams)</label>
+                  <label className="text-[12px] text-pos-text-secondary">
+                    Weight (grams)
+                  </label>
                   <Input
                     value={weightGrams}
                     onChange={(e) => setWeightGrams(e.target.value)}
@@ -323,17 +382,24 @@ function NewOrderInner() {
                   />
                 </div>
                 <div>
-                  <label className="text-[12px] text-pos-text-secondary">Rate (GHS / g)</label>
+                  <label className="text-[12px] text-pos-text-secondary">
+                    Rate (GHS / g)
+                  </label>
                   <Input
                     value={estimatedRate}
-                    onChange={(e) => { setEstimatedRate(e.target.value); setRateUserEdited(true) }}
+                    onChange={(e) => {
+                      setEstimatedRate(e.target.value);
+                      setRateUserEdited(true);
+                    }}
                     className="mt-1 h-9 rounded-[var(--radius-md)] border-pos-border-secondary text-[13px]"
                   />
                 </div>
               </div>
 
               <div className="mt-3">
-                <label className="text-[12px] text-pos-text-secondary">Notes (optional)</label>
+                <label className="text-[12px] text-pos-text-secondary">
+                  Notes (optional)
+                </label>
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -362,7 +428,10 @@ function NewOrderInner() {
                       ["Rate", `${fmtGHS(rate)}/g`],
                       ["Estimated value", fmtGHS(estimatedValue)],
                     ].map(([label, value]) => (
-                      <div key={label} className="flex justify-between py-1 text-[13px]">
+                      <div
+                        key={label}
+                        className="flex justify-between py-1 text-[13px]"
+                      >
                         <span className="text-pos-text-secondary">{label}</span>
                         <span className="text-pos-text-primary">{value}</span>
                       </div>
@@ -370,21 +439,34 @@ function NewOrderInner() {
                     {ledgerAdjustment !== 0 && (
                       <div className="flex justify-between py-1 text-[13px]">
                         <span className="text-pos-brand-dark">
-                          {ledgerAdjustment > 0 ? "Credit applied" : "Arrears deducted"}
+                          {ledgerAdjustment > 0
+                            ? "Credit applied"
+                            : "Arrears deducted"}
                         </span>
-                        <span className={cn("font-medium", ledgerAdjustment > 0 ? "text-pos-success" : "text-pos-danger")}>
-                          {ledgerAdjustment > 0 ? "+ " : "- "}{fmtGHS(Math.abs(ledgerAdjustment))}
+                        <span
+                          className={cn(
+                            "font-medium",
+                            ledgerAdjustment > 0
+                              ? "text-pos-success"
+                              : "text-pos-danger",
+                          )}
+                        >
+                          {ledgerAdjustment > 0 ? "+ " : "- "}
+                          {fmtGHS(Math.abs(ledgerAdjustment))}
                         </span>
                       </div>
                     )}
                     <div className="mt-3 flex justify-between border-t border-pos-border-tertiary pt-3 text-[15px] font-medium">
                       <span>Pay customer</span>
-                      <span className="text-pos-brand-ink">{fmtGHS(amountPaid)}</span>
+                      <span className="text-pos-brand-ink">
+                        {fmtGHS(amountPaid)}
+                      </span>
                     </div>
                   </div>
 
                   <div className="mt-3 rounded-[var(--radius-md)] bg-pos-bg-secondary px-3 py-2 text-[12px] text-pos-text-secondary">
-                    Final value confirmed at reconciliation. Any difference applied to customer ledger.
+                    Final value confirmed at reconciliation. Any difference
+                    applied to customer ledger.
                   </div>
 
                   <div className="mt-4">
@@ -393,7 +475,11 @@ function NewOrderInner() {
                       disabled={isSubmitting || submitted}
                       className="h-9 w-full rounded-[var(--radius-md)] bg-pos-brand text-[13px] font-medium text-white hover:bg-pos-brand-dark"
                     >
-                      {submitted ? "Order saved!" : isSubmitting ? "Saving..." : "Confirm transaction"}
+                      {submitted
+                        ? "Order saved!"
+                        : isSubmitting
+                          ? "Saving..."
+                          : "Confirm transaction"}
                     </Button>
                   </div>
                 </>
@@ -405,10 +491,15 @@ function NewOrderInner() {
             <SectionLabel>Customer history</SectionLabel>
             <div className="mt-3 space-y-2 text-[12px]">
               {!selectedCustomerId ? (
-                <p className="text-pos-text-secondary">Select a customer to view history.</p>
+                <p className="text-pos-text-secondary">
+                  Select a customer to view history.
+                </p>
               ) : customerQuery.isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="flex justify-between border-b border-pos-border-tertiary pb-2">
+                  <div
+                    key={i}
+                    className="flex justify-between border-b border-pos-border-tertiary pb-2"
+                  >
                     <span className="h-3 w-28 animate-pulse rounded bg-pos-bg-secondary" />
                     <span className="h-3 w-16 animate-pulse rounded bg-pos-bg-secondary" />
                   </div>
@@ -420,12 +511,17 @@ function NewOrderInner() {
                     className="flex justify-between border-b border-pos-border-tertiary pb-2 last:border-b-0"
                   >
                     <span className="text-pos-text-secondary">
-                      {order.orderNumber ?? `#${order.id.slice(0, 6).toUpperCase()}`} -{" "}
+                      {order.orderNumber ??
+                        `#${order.id.slice(0, 6).toUpperCase()}`}{" "}
+                      -{" "}
                       {order.createdAt
-                        ? new Date(order.createdAt).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                          })
+                        ? new Date(order.createdAt).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                            },
+                          )
                         : ""}
                     </span>
                     <span className="text-pos-brand-dark">
@@ -448,7 +544,7 @@ function NewOrderInner() {
         </div>
       </div>
     </DashboardShell>
-  )
+  );
 }
 
 export default function NewOrderPage() {
@@ -456,5 +552,5 @@ export default function NewOrderPage() {
     <Suspense>
       <NewOrderInner />
     </Suspense>
-  )
+  );
 }
