@@ -47,8 +47,6 @@ function getOfflineCachedSession(): any {
     if (!raw) return null;
     const stored = JSON.parse(raw);
     // Respect the server-issued expiry — don't grant indefinite offline access.
-    // better-auth rolls expiresAt forward on each online visit (SESSION_UPDATE_AGE),
-    // so a user who checks in every few days will always have a fresh window.
     const expiresAt = stored?.session?.expiresAt;
     if (expiresAt && new Date(expiresAt) < new Date()) {
       localStorage.removeItem(OFFLINE_SESSION_KEY);
@@ -68,7 +66,7 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
   const [primaryRole, setPrimaryRole] = useState<string | null>(null);
   const bootedRef = useRef(false);
 
-  // Persist session to localStorage whenever it's available so it can be
+  // Persist session to localStorage whenever it is available so it can be
   // used as a fallback when the device is offline.
   useEffect(() => {
     if (session) {
@@ -79,8 +77,7 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
   }, [session]);
 
   // Derive effective session: prefer the live network session; fall back to
-  // the localStorage copy only when the network fetch has finished and failed
-  // while the device is offline.
+  // the localStorage copy only when the network fetch has finished and failed.
   const offlineFallback = !isPending && !session ? getOfflineCachedSession() : null;
   const effectiveSession = session ?? offlineFallback;
 
@@ -108,13 +105,22 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
     if (!hasAccess || bootedRef.current) return;
     bootedRef.current = true;
 
+    // Register service worker.
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(console.warn);
     }
 
+    // Boot sequence: flush any queued offline mutations first (they take
+    // priority — user data must reach the server), then hydrate IDB with
+    // the latest server state. Hydration dispatches HYDRATION_COMPLETE_EVENT
+    // when done, which React Query hooks can listen to for cache invalidation.
     (async () => {
-      try { await flushSyncQueue(); } catch {}
-      try { await hydrateFromServer(); } catch {}
+      try {
+        await flushSyncQueue();
+      } catch {}
+      try {
+        await hydrateFromServer();
+      } catch {}
     })();
   }, [hasAccess]);
 

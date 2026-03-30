@@ -8,6 +8,7 @@ import { Topbar } from "@/components/dashboard/topbar"
 import { Button } from "@/components/ui/button"
 import { cn, exportXlsx, fmtGHS } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
+import { RequiresNetwork } from "@/components/dashboard/requires-network"
 
 type ReportsStats = {
   weeklyOrders: {
@@ -94,6 +95,7 @@ export default function ReportsPage() {
 
   return (
     <DashboardShell activeItem="reports" user={sidebarUser}>
+      <RequiresNetwork>
       <Topbar
         title="Reports"
         subtitle="Business overview - March 2026"
@@ -334,6 +336,7 @@ export default function ReportsPage() {
           </div>
         </div>
       </div>
+      </RequiresNetwork>
     </DashboardShell>
   )
 }

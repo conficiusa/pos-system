@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sheet"
 import { cn, fmtGHS } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
+import { RequiresNetwork } from "@/components/dashboard/requires-network"
 
 type PendingOrder = {
   id: string
@@ -401,6 +402,7 @@ export default function ReconciliationPage() {
 
   return (
     <DashboardShell activeItem="reconciliation" user={sidebarUser}>
+      <RequiresNetwork>
       <Topbar
         title="Reconciliation"
         subtitle="Click an order to enter true assay values"
@@ -562,6 +564,7 @@ export default function ReconciliationPage() {
         onClose={() => setSelectedId(null)}
         onConfirmed={handleConfirmed}
       />
+      </RequiresNetwork>
     </DashboardShell>
   )
 }

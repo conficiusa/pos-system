@@ -25,7 +25,9 @@
       "Bash(wrangler deploy:*)",
       "Bash(pnpm wrangler:*)",
       "Bash(ls:*)",
-      "Bash(pnpm typecheck:*)"
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm dlx:*)"
     ]
   }
 }

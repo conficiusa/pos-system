@@ -1,85 +1,73 @@
-const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v4";
+// GoldPOS Service Worker
+// Strategy:
+//   /_next/static/*  → CacheFirst (content-hashed, immutable)
+//   /_next/*         → NetworkFirst, cache fallback
+//   ?_rsc=*          → NetworkFirst, cache by pathname (RSC payloads)
+//   navigate         → NetworkFirst, cache on success, fallback to cached page then "/"
+//   /api/*           → Pass-through (never cache; offline data served by IndexedDB)
+//   /manifest.json   → CacheFirst
+//   everything else  → CacheFirst with network fallback
 
-// App shell — pre-cached on SW install so the app works offline immediately
-const SHELL_URLS = [
-  "/",
-  "/customers",
-  "/orders",
-  "/ledger",
-  "/reports",
-  "/login",
-  "/manifest.json",
-];
+const SYNC_TAG = "goldpos-sync-v1";
+const CACHE_NAME = "goldpos-shell-v5";
+
+// Static assets that are safe to pre-cache during install.
+// Do NOT include auth-protected HTML pages here — they may not be
+// accessible at install time and the response could be a redirect.
+// Navigation responses are cached at runtime by the fetch handler.
+const PRECACHE_URLS = ["/manifest.json"];
+
+// ─── Install ──────────────────────────────────────────────────────────────────
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then(async (cache) => {
-        var assetUrls = new Set();
-
-        // Fetch shell pages, cache them, and extract /_next/static/ asset URLs
-        // from HTML responses so the JS/CSS chunks are also available offline.
-        await Promise.all(
-          SHELL_URLS.map(async (url) => {
-            try {
-              var res = await fetch(url);
-              if (!res.ok) return;
-              var clone = res.clone();
-              await cache.put(new Request(url), clone);
-
-              // Only parse HTML responses for asset references
-              var ct = res.headers.get("content-type") || "";
-              if (ct.includes("text/html")) {
-                var html = await res.text();
-                var matches = html.matchAll(/\/_next\/static\/[^"'\s)>]+/g);
-                for (var m of matches) assetUrls.add(m[0]);
-              }
-            } catch {
-              // Individual failures are non-fatal
-            }
-          })
-        );
-
-        // Pre-cache the extracted static assets (JS chunks, CSS, etc.)
-        if (assetUrls.size > 0) {
-          await Promise.all(
-            Array.from(assetUrls).map((url) =>
-              cache.add(url).catch(() => {})
-            )
-          );
-        }
-      })
-      .then(() => self.skipWaiting())
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting()),
   );
 });
+
+// ─── Activate ─────────────────────────────────────────────────────────────────
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
+      // Delete caches from all previous versions.
       caches
         .keys()
         .then((keys) =>
           Promise.all(
             keys
               .filter((key) => key !== CACHE_NAME)
-              .map((key) => caches.delete(key))
-          )
+              .map((key) => caches.delete(key)),
+          ),
         ),
       self.clients.claim(),
-    ])
+    ]),
   );
 });
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function cacheResponse(request, response) {
+  if (!response || !response.ok) return;
+  const clone = response.clone();
+  caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+}
+
+// ─── Fetch ────────────────────────────────────────────────────────────────────
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Never intercept API calls — let idb.ts handle offline writes
+  // Never intercept API calls — offline data is served by IndexedDB in the app.
+  // Intercepting /api/* would break auth (cookies) and add no value.
   if (url.pathname.startsWith("/api/")) return;
 
-  // Next.js static assets (immutable, content-hashed) — cache first
+  // ── Next.js immutable static assets — CacheFirst ──────────────────────────
+  // /_next/static/* files are content-hashed and never change for a given hash.
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
       caches.match(request).then(
@@ -87,71 +75,88 @@ self.addEventListener("fetch", (event) => {
           cached ??
           fetch(request)
             .then((res) => {
-              if (res.ok) {
-                const clone = res.clone();
-                caches.open(CACHE_NAME).then((c) => c.put(request, clone));
-              }
+              cacheResponse(request, res);
               return res;
             })
-            .catch(() => new Response("", { status: 503 }))
-      )
+            .catch(
+              () =>
+                new Response("Static asset unavailable offline.", {
+                  status: 503,
+                }),
+            ),
+      ),
     );
     return;
   }
 
-  // Other _next paths — network first, cache fallback
+  // ── Other _next paths (image optimisation, data routes) — NetworkFirst ────
   if (url.pathname.startsWith("/_next/")) {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
-          }
+          cacheResponse(request, res);
           return res;
         })
         .catch(() =>
           caches
             .match(request)
-            .then((cached) => cached ?? new Response("", { status: 503 }))
-        )
+            .then(
+              (cached) =>
+                cached ??
+                new Response("Resource unavailable offline.", { status: 503 }),
+            ),
+        ),
     );
     return;
   }
 
-  // RSC requests (client-side navigations via React Server Components)
-  // Cache by pathname only — the _rsc nonce changes per deployment and would
-  // never match on a cache lookup. Serving a cached RSC payload is safe because
-  // these pages are client components that load data via useQuery independently.
+  // ── RSC navigation payloads — NetworkFirst, cache by stable pathname ──────
+  // Next.js App Router issues fetch requests with ?_rsc={nonce} for client-side
+  // navigation. The nonce changes every deployment, making the full URL
+  // uncacheable. Cache by pathname + "?_rsc" so re-navigations work offline.
+  // This is safe because all dashboard pages use client-side data fetching
+  // (TanStack Query + IndexedDB) — the RSC payload is just the component tree
+  // with no embedded server data.
   if (url.searchParams.has("_rsc")) {
-    var rscCacheKey = url.pathname + "?_rsc";
+    // Use only the pathname as the cache key to survive nonce rotation.
+    const cacheKey = new Request(url.pathname + "?_rsc", {
+      headers: request.headers,
+    });
     event.respondWith(
       fetch(request)
         .then((res) => {
           if (res.ok) {
             const clone = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(rscCacheKey, clone));
+            caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, clone));
           }
           return res;
         })
         .catch(() =>
           caches
             .open(CACHE_NAME)
-            .then((c) => c.match(rscCacheKey))
-            .then((cached) => cached ?? new Response("", { status: 503 }))
-        )
+            .then((cache) => cache.match(cacheKey))
+            .then(
+              (cached) =>
+                cached ??
+                new Response("", {
+                  status: 503,
+                  statusText: "Offline — RSC payload unavailable",
+                }),
+            ),
+        ),
     );
     return;
   }
 
-  // Navigation — network first, fall back to cache
+  // ── Navigation requests (full page loads) — NetworkFirst ─────────────────
+  // Cache the response so it is available for future offline navigations.
+  // Fallback chain: cached version of the exact page → cached "/" → error.
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
         .then((res) => {
           if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+            cacheResponse(request, res);
           }
           return res;
         })
@@ -162,45 +167,89 @@ self.addEventListener("fetch", (event) => {
             .then(
               (fallback) =>
                 fallback ??
-                new Response("Offline — please reconnect", { status: 503 })
-            )
-        )
+                new Response(
+                  "<!doctype html><html><head><title>Offline</title></head><body>" +
+                    "<p style='font-family:sans-serif;padding:2rem'>You are offline. " +
+                    "Please reconnect to access GoldPOS.</p></body></html>",
+                  {
+                    status: 503,
+                    headers: { "Content-Type": "text/html" },
+                  },
+                ),
+            ),
+        ),
     );
     return;
   }
 
-  // Static assets — cache first, network fallback
+  // ── manifest.json — CacheFirst ────────────────────────────────────────────
+  if (url.pathname === "/manifest.json") {
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ??
+          fetch(request)
+            .then((res) => {
+              cacheResponse(request, res);
+              return res;
+            })
+            .catch(
+              () =>
+                new Response("{}", {
+                  status: 200,
+                  headers: { "Content-Type": "application/json" },
+                }),
+            ),
+      ),
+    );
+    return;
+  }
+
+  // ── All other requests — CacheFirst with network fallback ─────────────────
   event.respondWith(
     caches.match(request).then(
       (cached) =>
         cached ??
         fetch(request)
           .then((res) => {
+            // Only cache same-origin "basic" responses to avoid caching
+            // opaque responses from third-party origins.
             if (res.ok && res.type === "basic") {
-              const clone = res.clone();
-              caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+              cacheResponse(request, res);
             }
             return res;
           })
-          .catch(() => new Response("", { status: 503 }))
-    )
+          .catch(
+            () =>
+              new Response("Resource unavailable offline.", { status: 503 }),
+          ),
+    ),
   );
 });
 
-// Background sync — tell active clients to flush their IDB queue
+// ─── Background Sync ──────────────────────────────────────────────────────────
+// The browser fires this event when connectivity is restored after the app
+// registered a sync via `registration.sync.register(SYNC_TAG)`.
+//
+// The service worker cannot flush the IDB sync queue directly because it does
+// not have access to the auth cookies. Instead, it posts a message to all
+// open windows, which triggers flushSyncQueue() inside the page.
+
 self.addEventListener("sync", (event) => {
   if (event.tag === SYNC_TAG) {
     event.waitUntil(
       self.clients
         .matchAll({ type: "window", includeUncontrolled: true })
-        .then((clients) =>
+        .then((clients) => {
           clients.forEach((client) =>
-            client.postMessage({ type: "SW_SYNC_REQUESTED" })
-          )
-        )
+            client.postMessage({ type: "SW_SYNC_REQUESTED" }),
+          );
+        }),
     );
   }
 });
+
+// ─── Push notifications (for future Thursday valuation reminders) ─────────────
 
 self.addEventListener("push", (event) => {
   if (!event.data) return;
@@ -208,8 +257,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
-    })
+      icon: "/favicon.svg",
+      badge: "/favicon.svg",
+    }),
   );
 });

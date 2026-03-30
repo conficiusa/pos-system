@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
+import { RequiresNetwork } from "@/components/dashboard/requires-network"
 import { ConfirmPasswordDialog } from "@/components/dashboard/confirm-password-dialog"
 import {
   Dialog,
@@ -282,6 +283,7 @@ export default function SettingsPage() {
 
   return (
     <DashboardShell activeItem="settings" user={sidebarUser}>
+      <RequiresNetwork>
       <Topbar title="Settings" subtitle="Manage rates, users, and roles" />
 
       <div className="mx-auto w-full max-w-3xl px-6 py-6">
@@ -668,6 +670,7 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      </RequiresNetwork>
     </DashboardShell>
   )
 }

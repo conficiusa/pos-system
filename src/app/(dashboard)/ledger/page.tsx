@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn, exportXlsx, fmtGHS } from "@/lib/utils";
 import { useSessionContext } from "@/components/dashboard/session-guard";
+import { RequiresNetwork } from "@/components/dashboard/requires-network";
 
 type LedgerEntry = {
   id: string;
@@ -138,6 +139,7 @@ export default function LedgerPage() {
 
   return (
     <DashboardShell activeItem="ledger" user={sidebarUser}>
+      <RequiresNetwork>
       <Topbar
         title="Ledger"
         subtitle="All customer financial entries — immutable audit trail"
@@ -302,6 +304,7 @@ export default function LedgerPage() {
           </div>
         </div>
       </div>
+      </RequiresNetwork>
     </DashboardShell>
   );
 }

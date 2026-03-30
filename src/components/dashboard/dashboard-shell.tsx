@@ -4,6 +4,7 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Sidebar, type NavKey, type SidebarUser } from "@/components/dashboard/sidebar"
 import { DashboardContext } from "@/components/dashboard/dashboard-context"
+import { SyncStatusBar } from "@/components/dashboard/sync-status-bar"
 
 type DashboardShellProps = {
   activeItem: NavKey
@@ -46,8 +47,11 @@ export function DashboardShell({
           onMobileClose={() => setMobileSidebarOpen(false)}
         />
 
-        <div className={cn("flex h-full min-w-0 flex-col overflow-y-auto bg-pos-bg-tertiary", mainClassName)}>
-          {children}
+        <div className={cn("flex h-full min-w-0 flex-col bg-pos-bg-tertiary", mainClassName)}>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            {children}
+          </div>
+          <SyncStatusBar />
         </div>
       </div>
     </DashboardContext.Provider>

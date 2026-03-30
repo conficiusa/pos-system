@@ -11,6 +11,7 @@ import { cn, exportXlsx, fmtGHS } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
 import { localGetAll } from "@/services/sync/idb"
 import { printOrderReceipt } from "@/lib/print-receipt"
+import { RequiresNetwork } from "@/components/dashboard/requires-network"
 
 type OrderWithCustomer = {
   id: string
@@ -168,6 +169,7 @@ export default function OrdersPage() {
 
   return (
     <DashboardShell activeItem="orders" user={sidebarUser}>
+      <RequiresNetwork>
       <Topbar
         title="Orders"
         subtitle="All gold purchase orders"
@@ -332,6 +334,7 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+      </RequiresNetwork>
     </DashboardShell>
   )
 }

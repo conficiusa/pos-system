@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn, fmtGHS } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
-import { localWrite } from "@/services/sync/idb"
+import { localWrite, localGetAll, localGetById } from "@/services/sync/idb"
 import { nanoid } from "nanoid"
 import type { Customer, Order } from "@/lib/db/schemas"
 
@@ -50,27 +50,63 @@ function NewOrderInner() {
   // Queries
   const customerListQuery = useQuery({
     queryKey: ["customers-search", debouncedSearch],
-    queryFn: () => {
+    queryFn: async () => {
       const url = debouncedSearch
         ? `/api/customers?q=${encodeURIComponent(debouncedSearch)}`
         : "/api/customers"
-      return fetch(url).then((r) => r.json() as Promise<{ data: Customer[] }>)
+      try {
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(res.statusText)
+        return res.json() as Promise<{ data: Customer[] }>
+      } catch {
+        // Offline fallback: read from IndexedDB and filter client-side.
+        let customers = await localGetAll("customers")
+        if (debouncedSearch) {
+          const q = debouncedSearch.toLowerCase()
+          customers = customers.filter(
+            (c) =>
+              c.name.toLowerCase().includes(q) ||
+              c.phone.toLowerCase().includes(q),
+          )
+        }
+        return { data: customers as Customer[] }
+      }
     },
     enabled: showPicker,
   })
 
   const customerQuery = useQuery({
     queryKey: ["customer", selectedCustomerId],
-    queryFn: () =>
-      fetch(`/api/customers/${selectedCustomerId}`).then(
-        (r) =>
-          r.json() as Promise<{
-            customer: Customer
-            orderCount: number
-            totalPaid: number
-            recentOrders: Order[]
-          }>,
-      ),
+    queryFn: async () => {
+      try {
+        const res = await fetch(`/api/customers/${selectedCustomerId}`)
+        if (!res.ok) throw new Error(res.statusText)
+        return res.json() as Promise<{
+          customer: Customer
+          orderCount: number
+          totalPaid: number
+          recentOrders: Order[]
+        }>
+      } catch {
+        // Offline fallback: assemble the customer detail from IDB.
+        const customer = await localGetById("customers", selectedCustomerId!)
+        if (!customer) return null
+        const orders = await localGetAll("orders")
+        const customerOrders = orders.filter((o) => o.customerId === customer.id)
+        const totalPaid = customerOrders.reduce((sum, o) => sum + o.amountPaid, 0)
+        return {
+          customer,
+          orderCount: customerOrders.length,
+          totalPaid,
+          recentOrders: customerOrders
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            )
+            .slice(0, 5),
+        }
+      }
+    },
     enabled: !!selectedCustomerId,
   })
   const customer = customerQuery.data ?? null
