@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Session } from "@/lib/auth-client";
 import { useNetworkStatus } from "@/hooks/use-network-status";
+import { apiFetch } from "@/lib/api-client";
 import type { SidebarUser } from "@/components/dashboard/sidebar";
 import { hydrateFromServer, flushSyncQueue } from "@/services/sync/idb";
 
@@ -92,9 +93,10 @@ async function warmOfflineRouteCache(route: string) {
 }
 
 async function fetchCurrentSession(): Promise<Session | null> {
-  const res = await fetch("/api/auth/get-session", {
+  const res = await apiFetch("/api/auth/get-session", {
     credentials: "include",
     cache: "no-store",
+    timeoutMs: 5_000,
   });
 
   if (res.status === 401) return null;
@@ -233,7 +235,10 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
 
       await Promise.allSettled([
         ...DASHBOARD_ROUTES.map((route) => warmOfflineRouteCache(route)),
-        fetch("/api/settings/rate", { credentials: "include" })
+        apiFetch("/api/settings/rate", {
+          credentials: "include",
+          timeoutMs: 5_000,
+        })
           .then(async (res) => {
             if (!res.ok) return;
             const data = (await res.json()) as { rate?: number };

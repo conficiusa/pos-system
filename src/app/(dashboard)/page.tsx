@@ -11,6 +11,7 @@ import {
 import { Topbar } from "@/components/dashboard/topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api-client";
 import { cn, exportXlsx, fmtGHS } from "@/lib/utils";
 import { useSessionContext } from "@/components/dashboard/session-guard";
 import { localGetAll } from "@/services/sync/idb";
@@ -84,7 +85,7 @@ export default function OrdersPage() {
     queryKey: ["reports-stats"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/reports/stats");
+        const res = await apiFetch("/api/reports/stats");
         if (!res.ok) throw new Error(res.statusText);
         return res.json() as Promise<{ weeklyOrders: WeeklyStats }>;
       } catch {
@@ -120,7 +121,7 @@ export default function OrdersPage() {
       if (searchTerm.trim()) params.set("q", searchTerm.trim());
       const url = `/api/orders${params.toString() ? `?${params}` : ""}`;
       try {
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         if (!res.ok) throw new Error(res.statusText);
         const data = (await res.json()) as { data: OrderWithCustomer[] };
         return data.data ?? [];

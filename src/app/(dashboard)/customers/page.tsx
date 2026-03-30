@@ -8,6 +8,7 @@ import { IconSearch } from "@/components/dashboard/icons";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api-client";
 import { cn, fmtGHS } from "@/lib/utils";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useSessionContext } from "@/components/dashboard/session-guard";
@@ -91,7 +92,7 @@ export default function CustomersPage() {
         ? `/api/customers?q=${encodeURIComponent(debouncedQuery)}`
         : "/api/customers";
       try {
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         if (!res.ok) throw new Error(res.statusText);
         return res.json() as Promise<{ data?: CustomerListItem[] }>;
       } catch {
@@ -115,7 +116,7 @@ export default function CustomersPage() {
     queryFn: async () => {
       if (!selectedId) return null;
       try {
-        const res = await fetch(`/api/customers/${selectedId}`);
+        const res = await apiFetch(`/api/customers/${selectedId}`);
         if (!res.ok) throw new Error(res.statusText);
         return res.json() as Promise<{
           customer: Customer;
@@ -165,7 +166,7 @@ export default function CustomersPage() {
     }
     setIsSettling(true);
     try {
-      const res = await fetch(`/api/customers/${selectedId}/settlements`, {
+      const res = await apiFetch(`/api/customers/${selectedId}/settlements`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount, note: settlementNote || undefined }),

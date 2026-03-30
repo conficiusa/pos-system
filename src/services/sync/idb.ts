@@ -4,6 +4,8 @@ import type {
   Order,
   SyncQueueEntry,
 } from "@/lib/db/schemas";
+import { onlineManager } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api-client";
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { nanoid } from "nanoid";
 
@@ -131,7 +133,7 @@ export async function localWrite<T extends { id: string; updatedAt?: string }>(
   await db.put("sync_queue", entry as SyncQueueEntry);
 
   // 3. Flush to server immediately if online — fire and forget.
-  if (typeof navigator !== "undefined" && navigator.onLine) {
+  if (typeof window !== "undefined" && onlineManager.isOnline()) {
     flushSyncQueue().catch(console.warn);
   }
 
@@ -203,7 +205,7 @@ let _flushing = false;
 
 export async function flushSyncQueue(): Promise<SyncBatchResponse | null> {
   if (_flushing) return null;
-  if (typeof navigator !== "undefined" && !navigator.onLine) return null;
+  if (typeof window !== "undefined" && !onlineManager.isOnline()) return null;
   _flushing = true;
 
   try {
@@ -218,10 +220,11 @@ export async function flushSyncQueue(): Promise<SyncBatchResponse | null> {
 
     if (!pending.length) return null;
 
-    const res = await fetch("/api/sync", {
+    const res = await apiFetch("/api/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mutations: pending }),
+      timeoutMs: 15_000,
     });
 
     if (!res.ok) {
@@ -310,7 +313,7 @@ export function getFailedSyncIds(): string[] {
 // Dispatches HYDRATION_COMPLETE_EVENT when done so React hooks can invalidate.
 
 export async function hydrateFromServer(): Promise<void> {
-  if (typeof navigator === "undefined" || !navigator.onLine) return;
+  if (typeof window === "undefined" || !onlineManager.isOnline()) return;
 
   try {
     const since = localStorage.getItem(LAST_HYDRATED_KEY);
@@ -340,8 +343,9 @@ async function fullSeed(): Promise<void> {
   let page = 1;
   const perPage = 200;
   while (true) {
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/customers?page=${page}&perPage=${perPage}`,
+      { timeoutMs: 15_000 },
     );
     if (!res.ok) break;
     const json = (await res.json()) as {
@@ -361,7 +365,9 @@ async function fullSeed(): Promise<void> {
   // Paginate orders — same pattern.
   page = 1;
   while (true) {
-    const res = await fetch(`/api/orders?page=${page}&perPage=${perPage}`);
+    const res = await apiFetch(`/api/orders?page=${page}&perPage=${perPage}`, {
+      timeoutMs: 15_000,
+    });
     if (!res.ok) break;
     const json = (await res.json()) as {
       data: Order[];
@@ -381,8 +387,9 @@ async function fullSeed(): Promise<void> {
 async function incrementalPull(since: string): Promise<void> {
   const db = await getIDB();
 
-  const res = await fetch(
+  const res = await apiFetch(
     `/api/sync/pull?since=${encodeURIComponent(since)}`,
+    { timeoutMs: 15_000 },
   );
   if (!res.ok) {
     // If the pull endpoint fails, fall back to a full seed.

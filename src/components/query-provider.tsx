@@ -1,8 +1,34 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  onlineManager,
+} from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { HYDRATION_COMPLETE_EVENT } from "@/services/sync/idb";
+
+const CONNECTIVITY_CHECK_URL = "/api/ping";
+const CONNECTIVITY_CHECK_INTERVAL_MS = 15_000;
+const CONNECTIVITY_CHECK_TIMEOUT_MS = 4_000;
+
+async function probeConnectivity(signal: AbortSignal): Promise<boolean> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return false;
+  }
+
+  try {
+    const res = await fetch(CONNECTIVITY_CHECK_URL, {
+      method: "HEAD",
+      cache: "no-store",
+      signal,
+    });
+
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -22,6 +48,71 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         },
       }),
   );
+
+  useEffect(() => {
+    let disposed = false;
+    let activeController: AbortController | null = null;
+
+    async function refreshOnlineState() {
+      activeController?.abort();
+
+      const controller = new AbortController();
+      activeController = controller;
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        CONNECTIVITY_CHECK_TIMEOUT_MS,
+      );
+
+      try {
+        const reachable = await probeConnectivity(controller.signal);
+        if (!disposed) {
+          onlineManager.setOnline(reachable);
+        }
+      } finally {
+        window.clearTimeout(timeoutId);
+        if (activeController === controller) {
+          activeController = null;
+        }
+      }
+    }
+
+    function handleOnline() {
+      void refreshOnlineState();
+    }
+
+    function handleOffline() {
+      onlineManager.setOnline(false);
+    }
+
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        void refreshOnlineState();
+      }
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("focus", handleOnline);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    void refreshOnlineState();
+
+    const intervalId = window.setInterval(() => {
+      if (!document.hidden) {
+        void refreshOnlineState();
+      }
+    }, CONNECTIVITY_CHECK_INTERVAL_MS);
+
+    return () => {
+      disposed = true;
+      activeController?.abort();
+      window.clearInterval(intervalId);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("focus", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     // When hydrateFromServer() completes it dispatches HYDRATION_COMPLETE_EVENT.

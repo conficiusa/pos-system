@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { apiFetch } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -45,10 +46,11 @@ export function ConfirmPasswordDialog({
     setIsPending(true)
 
     try {
-      const res = await fetch("/api/settings/verify-password", {
+      const res = await apiFetch("/api/settings/verify-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
+        timeoutMs: 5_000,
       })
       const data = await res.json() as { valid?: boolean }
 

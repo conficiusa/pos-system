@@ -9,6 +9,7 @@ import { SectionLabel } from "@/components/dashboard/section-label";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api-client";
 import { cn, fmtGHS } from "@/lib/utils";
 import { useSessionContext } from "@/components/dashboard/session-guard";
 import { useNetworkStatus } from "@/hooks/use-network-status";
@@ -91,7 +92,7 @@ function NewOrderInner() {
         ? `/api/customers?q=${encodeURIComponent(debouncedSearch)}`
         : "/api/customers";
       try {
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         if (!res.ok) throw new Error(res.statusText);
         return res.json() as Promise<{ data: Customer[] }>;
       } catch {
@@ -115,7 +116,7 @@ function NewOrderInner() {
     queryKey: ["customer", selectedCustomerId],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/customers/${selectedCustomerId}`);
+        const res = await apiFetch(`/api/customers/${selectedCustomerId}`);
         if (!res.ok) throw new Error(res.statusText);
         return res.json() as Promise<{
           customer: Customer;
@@ -157,7 +158,7 @@ function NewOrderInner() {
     queryKey: ["current-rate"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/settings/rate");
+        const res = await apiFetch("/api/settings/rate");
         if (!res.ok) throw new Error(res.statusText);
         const data = (await res.json()) as { rate: number };
         writeCachedRate(data.rate);

@@ -7,6 +7,7 @@ import { IconExport, IconSearch } from "@/components/dashboard/icons";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api-client";
 import { cn, exportXlsx, fmtGHS } from "@/lib/utils";
 import { useSessionContext } from "@/components/dashboard/session-guard";
 import { RequiresNetwork } from "@/components/dashboard/requires-network";
@@ -72,7 +73,7 @@ export default function LedgerPage() {
   const statsQuery = useQuery({
     queryKey: ["reports-stats"],
     queryFn: () =>
-      fetch("/api/reports/stats").then(
+      apiFetch("/api/reports/stats").then(
         (r) => r.json() as Promise<{ ledger: LedgerStats }>,
       ),
   });
@@ -82,7 +83,7 @@ export default function LedgerPage() {
     queryKey: ["ledger", typeFilter],
     queryFn: () => {
       const url = typeFilter ? `/api/ledger?type=${typeFilter}` : `/api/ledger`;
-      return fetch(url).then(
+      return apiFetch(url).then(
         (r) => r.json() as Promise<{ data: LedgerEntry[] }>,
       );
     },

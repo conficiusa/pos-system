@@ -17,6 +17,7 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet"
+import { apiFetch } from "@/lib/api-client"
 import { cn, fmtGHS } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
 import { RequiresNetwork } from "@/components/dashboard/requires-network"
@@ -352,7 +353,7 @@ export default function ReconciliationPage() {
   const ordersQuery = useQuery({
     queryKey: ["reconciliation-orders"],
     queryFn: () =>
-      fetch("/api/reconciliation").then((r) => r.json() as Promise<{ data: PendingOrder[] }>),
+      apiFetch("/api/reconciliation").then((r) => r.json() as Promise<{ data: PendingOrder[] }>),
   })
   const orders = ordersQuery.data?.data ?? []
   const selectedOrder = orders.find((o) => o.id === selectedId) ?? null
@@ -367,7 +368,7 @@ export default function ReconciliationPage() {
   const allConfirmed = orders.length > 0 && confirmedIds.size === orders.length
 
   const handleConfirmed = async (orderId: string, trueRate: number) => {
-    const res = await fetch("/api/valuations", {
+    const res = await apiFetch("/api/valuations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderId, trueRate }),

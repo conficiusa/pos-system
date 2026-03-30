@@ -6,6 +6,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { IconExport } from "@/components/dashboard/icons"
 import { Topbar } from "@/components/dashboard/topbar"
 import { Button } from "@/components/ui/button"
+import { apiFetch } from "@/lib/api-client"
 import { cn, exportXlsx, fmtGHS } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
 import { RequiresNetwork } from "@/components/dashboard/requires-network"
@@ -46,12 +47,12 @@ export default function ReportsPage() {
 
   const statsQuery = useQuery({
     queryKey: ["reports-stats"],
-    queryFn: () => fetch("/api/reports/stats").then((r) => r.json() as Promise<ReportsStats>),
+    queryFn: () => apiFetch("/api/reports/stats").then((r) => r.json() as Promise<ReportsStats>),
   })
 
   const chartsQuery = useQuery({
     queryKey: ["reports-charts"],
-    queryFn: () => fetch("/api/reports/charts").then((r) => r.json() as Promise<ChartData>),
+    queryFn: () => apiFetch("/api/reports/charts").then((r) => r.json() as Promise<ChartData>),
   })
 
   const stats = statsQuery.data ?? null

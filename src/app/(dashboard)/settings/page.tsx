@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { apiFetch } from "@/lib/api-client"
 import { cn } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
 import { RequiresNetwork } from "@/components/dashboard/requires-network"
@@ -143,7 +144,7 @@ export default function SettingsPage() {
 
   const rateQuery = useQuery({
     queryKey: ["settings-rate"],
-    queryFn: () => fetch("/api/settings/rate").then((r) => r.json() as Promise<RateData>),
+    queryFn: () => apiFetch("/api/settings/rate").then((r) => r.json() as Promise<RateData>),
   })
 
   useEffect(() => {
@@ -154,7 +155,7 @@ export default function SettingsPage() {
   const usersQuery = useQuery({
     queryKey: ["settings-users"],
     queryFn: () =>
-      fetch("/api/settings/users").then(
+      apiFetch("/api/settings/users").then(
         (r) => r.json() as Promise<{ data?: AppUser[]; error?: string }>,
       ),
     retry: 1,
@@ -173,7 +174,7 @@ export default function SettingsPage() {
     if (isNaN(value) || value <= 0) { setRateError("Enter a valid positive number"); return }
     setIsSavingRate(true)
     try {
-      const res = await fetch("/api/settings/rate", {
+      const res = await apiFetch("/api/settings/rate", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rate: value }),
@@ -196,7 +197,7 @@ export default function SettingsPage() {
     setCreateError(null)
     setIsCreating(true)
     try {
-      const res = await fetch("/api/settings/users", {
+      const res = await apiFetch("/api/settings/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -222,7 +223,7 @@ export default function SettingsPage() {
     if (!pendingDelete) return
     setIsDeleting(true)
     try {
-      await fetch(`/api/settings/users/${pendingDelete.userId}`, { method: "DELETE" })
+      await apiFetch(`/api/settings/users/${pendingDelete.userId}`, { method: "DELETE" })
       void queryClient.invalidateQueries({ queryKey: ["settings-users"] })
     } finally {
       setIsDeleting(false)
@@ -236,13 +237,13 @@ export default function SettingsPage() {
     try {
       if (pendingRoleChange.type === "grant") {
         setIsGrantingRole(true)
-        await fetch(`/api/settings/users/${pendingRoleChange.userId}/roles`, {
+        await apiFetch(`/api/settings/users/${pendingRoleChange.userId}/roles`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ role: pendingRoleChange.role }),
         })
       } else {
-        await fetch(
+        await apiFetch(
           `/api/settings/users/${pendingRoleChange.userId}/roles/${pendingRoleChange.role}`,
           { method: "DELETE" },
         )
@@ -250,7 +251,7 @@ export default function SettingsPage() {
       void queryClient.invalidateQueries({ queryKey: ["settings-users"] })
       // Refresh manage dialog target data
       if (manageTarget) {
-        const freshUsers = await fetch("/api/settings/users").then(
+        const freshUsers = await apiFetch("/api/settings/users").then(
           (r) => r.json() as Promise<{ data?: AppUser[] }>,
         )
         const updated = freshUsers.data?.find((u) => u.id === manageTarget.user.id)
