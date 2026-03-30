@@ -3,7 +3,7 @@ declare const self: ServiceWorkerGlobalScope;
 
 // Must match the tag registered in idb.ts when queuing a background sync.
 const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v5";
+const CACHE_NAME = "goldpos-shell-v8";
 const APP_NAME = "A Uphills Trading Enterprise";
 
 // Static assets that are safe to pre-cache during install.
@@ -125,7 +125,6 @@ self.addEventListener("fetch", (event) => {
                 cached ??
                 new Response("", {
                   status: 503,
-                  statusText: "Offline — RSC payload unavailable",
                 }),
             ),
         ),

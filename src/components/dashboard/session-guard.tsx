@@ -21,7 +21,7 @@ const DASHBOARD_ROUTES = [
   "/settings",
 ];
 const CACHED_RATE_KEY = "pos-cached-rate";
-const OFFLINE_CACHE_NAME = "goldpos-shell-v7";
+const OFFLINE_CACHE_NAME = "goldpos-shell-v8";
 
 type SessionCtxValue = {
   sidebarUser: SidebarUser;

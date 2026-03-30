@@ -86,9 +86,26 @@ function NewOrderInner() {
 
   // Queries
   const customerListQuery = useQuery({
-    queryKey: ["customers-search", debouncedSearch],
+    queryKey: [
+      "customers-search",
+      debouncedSearch,
+      isOnline ? "online" : "offline",
+    ],
     networkMode: "always",
     queryFn: async () => {
+      if (!isOnline) {
+        let customers = await localGetAll("customers");
+        if (debouncedSearch) {
+          const q = debouncedSearch.toLowerCase();
+          customers = customers.filter(
+            (c) =>
+              c.name.toLowerCase().includes(q) ||
+              c.phone.toLowerCase().includes(q),
+          );
+        }
+        return { data: customers as Customer[] };
+      }
+
       const url = debouncedSearch
         ? `/api/customers?q=${encodeURIComponent(debouncedSearch)}`
         : "/api/customers";
@@ -114,9 +131,35 @@ function NewOrderInner() {
   });
 
   const customerQuery = useQuery({
-    queryKey: ["customer", selectedCustomerId],
+    queryKey: ["customer", selectedCustomerId, isOnline ? "online" : "offline"],
     networkMode: "always",
     queryFn: async () => {
+      if (!selectedCustomerId) return null;
+      if (!isOnline) {
+        const customer = await localGetById("customers", selectedCustomerId);
+        if (!customer) return null;
+        const orders = await localGetAll("orders");
+        const customerOrders = orders.filter(
+          (o) => o.customerId === customer.id,
+        );
+        const totalPaid = customerOrders.reduce(
+          (sum, o) => sum + o.amountPaid,
+          0,
+        );
+        return {
+          customer,
+          orderCount: customerOrders.length,
+          totalPaid,
+          recentOrders: customerOrders
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime(),
+            )
+            .slice(0, 5),
+        };
+      }
+
       try {
         const res = await apiFetch(`/api/customers/${selectedCustomerId}`);
         if (!res.ok) throw new Error(res.statusText);
@@ -157,9 +200,13 @@ function NewOrderInner() {
   const customer = customerQuery.data ?? null;
 
   const rateQuery = useQuery({
-    queryKey: ["current-rate"],
+    queryKey: ["current-rate", isOnline ? "online" : "offline"],
     networkMode: "always",
     queryFn: async () => {
+      if (!isOnline) {
+        return { rate: readCachedRate() };
+      }
+
       try {
         const res = await apiFetch("/api/settings/rate");
         if (!res.ok) throw new Error(res.statusText);

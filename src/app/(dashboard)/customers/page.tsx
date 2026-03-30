@@ -86,9 +86,22 @@ export default function CustomersPage() {
   }, [searchQuery]);
 
   const customersQuery = useQuery({
-    queryKey: ["customers", debouncedQuery],
+    queryKey: ["customers", debouncedQuery, isOnline ? "online" : "offline"],
     networkMode: "always",
     queryFn: async () => {
+      if (!isOnline) {
+        let customers = await localGetAll("customers");
+        if (debouncedQuery) {
+          const q = debouncedQuery.toLowerCase();
+          customers = customers.filter(
+            (c) =>
+              c.name.toLowerCase().includes(q) ||
+              c.phone.toLowerCase().includes(q),
+          );
+        }
+        return { data: customers as CustomerListItem[] };
+      }
+
       const url = debouncedQuery
         ? `/api/customers?q=${encodeURIComponent(debouncedQuery)}`
         : "/api/customers";
@@ -113,10 +126,31 @@ export default function CustomersPage() {
   const customers = customersQuery.data?.data ?? [];
 
   const detailQuery = useQuery({
-    queryKey: ["customer", selectedId],
+    queryKey: ["customer", selectedId, isOnline ? "online" : "offline"],
     networkMode: "always",
     queryFn: async () => {
       if (!selectedId) return null;
+      if (!isOnline) {
+        const customer = await localGetById("customers", selectedId);
+        if (!customer) return null;
+        const recentOrders = await localGetOrdersByCustomer(selectedId);
+        return {
+          customer,
+          orderCount: recentOrders.length,
+          totalPaid: recentOrders.reduce(
+            (sum, order) => sum + order.amountPaid,
+            0,
+          ),
+          recentOrders: [...recentOrders]
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime(),
+            )
+            .slice(0, 5),
+        };
+      }
+
       try {
         const res = await apiFetch(`/api/customers/${selectedId}`);
         if (!res.ok) throw new Error(res.statusText);

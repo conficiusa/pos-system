@@ -9,7 +9,7 @@
 //   everything else  → CacheFirst with network fallback
 
 const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v7";
+const CACHE_NAME = "goldpos-shell-v8";
 const APP_NAME = "A Uphills Trading Enterprise";
 const APP_TAGLINE = "Gold Trading Specialists";
 

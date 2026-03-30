@@ -45,7 +45,7 @@ const _retryMap = new Map<string, number>();
 // ─── IndexedDB schema ─────────────────────────────────────────────────────────
 // Mirrors the D1 schema using Drizzle's inferred types directly.
 
-interface GoldPOSDB extends DBSchema {
+interface OfflinePosDB extends DBSchema {
   customers: {
     key: string;
     value: Customer;
@@ -68,11 +68,11 @@ interface GoldPOSDB extends DBSchema {
 
 // ─── DB singleton ─────────────────────────────────────────────────────────────
 
-let _db: IDBPDatabase<GoldPOSDB> | null = null;
+let _db: IDBPDatabase<OfflinePosDB> | null = null;
 
-export async function getIDB(): Promise<IDBPDatabase<GoldPOSDB>> {
+export async function getIDB(): Promise<IDBPDatabase<OfflinePosDB>> {
   if (_db) return _db;
-  _db = await openDB<GoldPOSDB>("goldpos-v1", 1, {
+  _db = await openDB<OfflinePosDB>("goldpos-v1", 1, {
     upgrade(db) {
       const custStore = db.createObjectStore("customers", { keyPath: "id" });
       custStore.createIndex("by_phone", "phone", { unique: true });
