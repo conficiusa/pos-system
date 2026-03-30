@@ -1,48 +1,63 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { signIn } from "@/lib/auth-client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState } from "react";
+import { signIn } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
     try {
-      const { error: authError } = await signIn.email({ email, password, callbackURL: "/" })
+      const { error: authError } = await signIn.email({
+        email,
+        password,
+        callbackURL: "/",
+      });
       if (authError) {
-        setError(authError.message ?? "Invalid email or password.")
+        setError(authError.message ?? "Invalid email or password.");
       } else {
-        router.push("/")
+        window.location.assign("/");
       }
     } catch {
-      setError("Something went wrong. Please try again.")
+      setError("Something went wrong. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="w-full max-w-sm">
       {/* Brand mark */}
       <div className="mb-8 text-center">
         <div className="inline-flex size-12 items-center justify-center rounded-[var(--radius-lg)] bg-pos-brand">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <circle cx="12" cy="12" r="8" />
             <path d="M9 12h6M12 9l3 3-3 3" />
           </svg>
         </div>
-        <p className="mt-3 text-[13px] font-medium text-pos-text-primary">GoldPOS</p>
-        <p className="mt-0.5 text-[12px] text-pos-text-tertiary">Sign in to your account</p>
+        <p className="mt-3 text-[13px] font-medium text-pos-text-primary">
+          GoldPOS
+        </p>
+        <p className="mt-0.5 text-[12px] text-pos-text-tertiary">
+          Sign in to your account
+        </p>
       </div>
 
       {/* Card */}
@@ -98,5 +113,5 @@ export default function LoginPage() {
         Contact your administrator to get access.
       </p>
     </div>
-  )
+  );
 }

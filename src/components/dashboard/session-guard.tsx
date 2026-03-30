@@ -10,8 +10,17 @@ import { hydrateFromServer, flushSyncQueue } from "@/services/sync/idb";
 const STAFF_ROLES = new Set(["staff", "admin", "super-admin"]);
 const OFFLINE_SESSION_KEY = "pos-offline-session";
 const OFFLINE_READY_ROUTES = ["/customers", "/new-order"];
+const DASHBOARD_ROUTES = [
+  "/",
+  "/customers",
+  "/new-order",
+  "/ledger",
+  "/reconciliation",
+  "/reports",
+  "/settings",
+];
 const CACHED_RATE_KEY = "pos-cached-rate";
-const OFFLINE_CACHE_NAME = "goldpos-shell-v6";
+const OFFLINE_CACHE_NAME = "goldpos-shell-v7";
 
 type SessionCtxValue = {
   sidebarUser: SidebarUser;
@@ -100,40 +109,62 @@ function useOfflineFirstSession(isOnline: boolean) {
   const [sessionState, setSessionState] = useState<{
     ready: boolean;
     value: Session | null;
-  }>({ ready: false, value: null });
-  const [isRefreshing, setIsRefreshing] = useState(false);
+    checkingRemote: boolean;
+  }>({ ready: false, value: null, checkingRemote: false });
 
   useEffect(() => {
-    setSessionState({ ready: true, value: getOfflineCachedSession() });
-  }, []);
+    const cachedSession = getOfflineCachedSession();
+    setSessionState({
+      ready: true,
+      value: cachedSession,
+      checkingRemote: isOnline && !cachedSession,
+    });
+  }, [isOnline]);
 
   useEffect(() => {
-    if (!sessionState.ready || !isOnline) {
-      setIsRefreshing(false);
+    if (!sessionState.ready) {
+      return;
+    }
+
+    if (!isOnline) {
+      setSessionState((current) =>
+        current.checkingRemote
+          ? { ...current, checkingRemote: false }
+          : current,
+      );
       return;
     }
 
     let cancelled = false;
-    setIsRefreshing(true);
+    const shouldBlockUntilChecked = !sessionState.value;
+
+    if (shouldBlockUntilChecked) {
+      setSessionState((current) =>
+        current.checkingRemote ? current : { ...current, checkingRemote: true },
+      );
+    }
 
     fetchCurrentSession()
       .then((liveSession) => {
         if (cancelled) return;
-        setSessionState({ ready: true, value: liveSession });
+        setSessionState({
+          ready: true,
+          value: liveSession,
+          checkingRemote: false,
+        });
         storeOfflineSession(liveSession);
       })
       .catch(() => {
         if (cancelled) return;
         setSessionState((current) =>
           current.value
-            ? current
-            : { ready: true, value: getOfflineCachedSession() },
+            ? { ...current, checkingRemote: false }
+            : {
+                ready: true,
+                value: getOfflineCachedSession(),
+                checkingRemote: false,
+              },
         );
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsRefreshing(false);
-        }
       });
 
     return () => {
@@ -143,7 +174,7 @@ function useOfflineFirstSession(isOnline: boolean) {
 
   return {
     data: sessionState.value,
-    isPending: !sessionState.ready || (!sessionState.value && isRefreshing),
+    isPending: !sessionState.ready || sessionState.checkingRemote,
   };
 }
 
@@ -201,7 +232,7 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
       });
 
       await Promise.allSettled([
-        ...OFFLINE_READY_ROUTES.map((route) => warmOfflineRouteCache(route)),
+        ...DASHBOARD_ROUTES.map((route) => warmOfflineRouteCache(route)),
         fetch("/api/settings/rate", { credentials: "include" })
           .then(async (res) => {
             if (!res.ok) return;

@@ -9,7 +9,7 @@
 //   everything else  → CacheFirst with network fallback
 
 const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v6";
+const CACHE_NAME = "goldpos-shell-v7";
 
 // Static assets that are safe to pre-cache during install.
 // Do NOT include auth-protected HTML pages here — they may not be
@@ -54,6 +54,10 @@ function cacheResponse(request, response) {
   if (!response || !response.ok) return;
   const clone = response.clone();
   caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+}
+
+function getNavigationCacheKey(url) {
+  return url.pathname === "/" ? "/" : url.pathname.replace(/\/$/, "");
 }
 
 // ─── Fetch ────────────────────────────────────────────────────────────────────
@@ -149,31 +153,36 @@ self.addEventListener("fetch", (event) => {
   }
 
   // ── Navigation requests (full page loads) — NetworkFirst ─────────────────
-  // Cache the response so it is available for future offline navigations.
-  // Fallback chain: cached version of the exact page → error.
+  // Cache by pathname so query-string variations like /new-order?customerId=1
+  // can still reuse the same offline document.
   if (request.mode === "navigate") {
+    const cacheKey = getNavigationCacheKey(url);
     event.respondWith(
       fetch(request)
         .then((res) => {
           if (res.ok) {
-            cacheResponse(request, res);
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, clone));
           }
           return res;
         })
         .catch(() =>
-          caches.match(request).then(
-            (fallback) =>
-              fallback ??
-              new Response(
-                "<!doctype html><html><head><title>Offline</title></head><body>" +
-                  "<p style='font-family:sans-serif;padding:2rem'>You are offline. " +
-                  "Please reconnect to access GoldPOS.</p></body></html>",
-                {
-                  status: 503,
-                  headers: { "Content-Type": "text/html" },
-                },
-              ),
-          ),
+          caches
+            .open(CACHE_NAME)
+            .then((cache) => cache.match(cacheKey))
+            .then(
+              (fallback) =>
+                fallback ??
+                new Response(
+                  "<!doctype html><html><head><title>Offline</title></head><body>" +
+                    "<p style='font-family:sans-serif;padding:2rem'>You are offline. " +
+                    "Please reconnect to access GoldPOS.</p></body></html>",
+                  {
+                    status: 503,
+                    headers: { "Content-Type": "text/html" },
+                  },
+                ),
+            ),
         ),
     );
     return;
