@@ -98,7 +98,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     void refreshOnlineState();
 
     const intervalId = window.setInterval(() => {
-      if (!document.hidden) {
+      if (!document.hidden && onlineManager.isOnline()) {
         void refreshOnlineState();
       }
     }, CONNECTIVITY_CHECK_INTERVAL_MS);

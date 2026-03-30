@@ -87,6 +87,7 @@ function NewOrderInner() {
   // Queries
   const customerListQuery = useQuery({
     queryKey: ["customers-search", debouncedSearch],
+    networkMode: "always",
     queryFn: async () => {
       const url = debouncedSearch
         ? `/api/customers?q=${encodeURIComponent(debouncedSearch)}`
@@ -114,6 +115,7 @@ function NewOrderInner() {
 
   const customerQuery = useQuery({
     queryKey: ["customer", selectedCustomerId],
+    networkMode: "always",
     queryFn: async () => {
       try {
         const res = await apiFetch(`/api/customers/${selectedCustomerId}`);
@@ -156,6 +158,7 @@ function NewOrderInner() {
 
   const rateQuery = useQuery({
     queryKey: ["current-rate"],
+    networkMode: "always",
     queryFn: async () => {
       try {
         const res = await apiFetch("/api/settings/rate");

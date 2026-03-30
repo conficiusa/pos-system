@@ -144,7 +144,6 @@ self.addEventListener("fetch", (event) => {
                 cached ??
                 new Response("", {
                   status: 503,
-                  statusText: "Offline — RSC payload unavailable",
                 }),
             ),
         ),

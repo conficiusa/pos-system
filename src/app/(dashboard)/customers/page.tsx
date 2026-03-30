@@ -87,6 +87,7 @@ export default function CustomersPage() {
 
   const customersQuery = useQuery({
     queryKey: ["customers", debouncedQuery],
+    networkMode: "always",
     queryFn: async () => {
       const url = debouncedQuery
         ? `/api/customers?q=${encodeURIComponent(debouncedQuery)}`
@@ -113,6 +114,7 @@ export default function CustomersPage() {
 
   const detailQuery = useQuery({
     queryKey: ["customer", selectedId],
+    networkMode: "always",
     queryFn: async () => {
       if (!selectedId) return null;
       try {
