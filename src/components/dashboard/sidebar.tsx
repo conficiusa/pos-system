@@ -4,6 +4,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-client";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import {
   IconCustomers,
   IconLedger,
@@ -70,6 +71,8 @@ const navItems = [
   },
 ];
 
+const OFFLINE_READY_ROUTES = new Set(["/customers", "/new-order"]);
+
 export type SidebarUser = {
   name: string;
   role: string;
@@ -99,6 +102,8 @@ export function Sidebar({
   mobileSidebarOpen = false,
   onMobileClose,
 }: SidebarProps) {
+  const { isOnline } = useNetworkStatus();
+
   return (
     <aside
       className={cn(
@@ -113,7 +118,9 @@ export function Sidebar({
       <div className="px-4 pb-4">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-[14px] font-medium text-pos-text-primary">GoldPOS</p>
+            <p className="text-[14px] font-medium text-pos-text-primary">
+              GoldPOS
+            </p>
             <p className="mt-1 text-[13px] text-pos-text-secondary">{branch}</p>
           </div>
           {/* Mobile close button */}
@@ -131,16 +138,34 @@ export function Sidebar({
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeItem === item.id;
+          const isOfflineReady = OFFLINE_READY_ROUTES.has(item.href);
+          const isOfflineBlocked = !isOnline && !isOfflineReady;
           return (
             <Link
               key={item.id}
               href={item.href}
-              onClick={onMobileClose}
+              prefetch={isOnline}
+              aria-disabled={isOfflineBlocked}
+              onClick={(event) => {
+                onMobileClose?.();
+
+                if (isOfflineBlocked) {
+                  event.preventDefault();
+                  return;
+                }
+
+                if (!isOnline && isOfflineReady) {
+                  event.preventDefault();
+                  window.location.assign(item.href);
+                }
+              }}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 text-[13px] text-pos-text-secondary transition",
                 "hover:bg-pos-bg-primary hover:text-pos-text-primary",
                 isActive &&
                   "border-r-2 border-pos-brand bg-pos-bg-primary font-medium text-pos-text-primary",
+                isOfflineBlocked &&
+                  "cursor-not-allowed opacity-45 hover:bg-transparent hover:text-pos-text-secondary",
               )}
             >
               <Icon className="size-[15px]" />
@@ -149,6 +174,12 @@ export function Sidebar({
           );
         })}
       </nav>
+      {!isOnline && (
+        <div className="mx-4 mt-3 rounded-md border border-pos-border-tertiary bg-pos-brand-soft px-3 py-2 text-[11px] leading-4 text-pos-brand-ink">
+          Offline: Customers and New order are available. Other pages need
+          internet.
+        </div>
+      )}
       <div className="mt-auto border-t border-pos-border-tertiary px-4 pt-4">
         <div className="flex items-center gap-2">
           <div

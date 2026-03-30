@@ -11,6 +11,7 @@ const STAFF_ROLES = new Set(["staff", "admin", "super-admin"]);
 const OFFLINE_SESSION_KEY = "pos-offline-session";
 const OFFLINE_READY_ROUTES = ["/customers", "/new-order"];
 const CACHED_RATE_KEY = "pos-cached-rate";
+const OFFLINE_CACHE_NAME = "goldpos-shell-v6";
 
 type SessionCtxValue = {
   sidebarUser: SidebarUser;
@@ -72,6 +73,13 @@ function storeCachedRate(rate: number) {
   try {
     localStorage.setItem(CACHED_RATE_KEY, String(rate));
   } catch {}
+}
+
+async function warmOfflineRouteCache(route: string) {
+  const res = await fetch(route, { credentials: "include" });
+  if (!res.ok || !("caches" in window)) return;
+  const cache = await caches.open(OFFLINE_CACHE_NAME);
+  await cache.put(route, res.clone());
 }
 
 async function fetchCurrentSession(): Promise<Session | null> {
@@ -193,9 +201,7 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
       });
 
       await Promise.allSettled([
-        ...OFFLINE_READY_ROUTES.map((route) =>
-          fetch(route, { credentials: "include" }).then(() => undefined),
-        ),
+        ...OFFLINE_READY_ROUTES.map((route) => warmOfflineRouteCache(route)),
         fetch("/api/settings/rate", { credentials: "include" })
           .then(async (res) => {
             if (!res.ok) return;

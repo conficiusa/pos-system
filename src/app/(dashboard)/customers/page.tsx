@@ -9,6 +9,7 @@ import { Topbar } from "@/components/dashboard/topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn, fmtGHS } from "@/lib/utils";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useSessionContext } from "@/components/dashboard/session-guard";
 import {
   localWrite,
@@ -51,6 +52,7 @@ const SkeletonCustomerRow = () => (
 
 export default function CustomersPage() {
   const router = useRouter();
+  const { isOnline } = useNetworkStatus();
   const { sidebarUser, userId } = useSessionContext();
   const queryClient = useQueryClient();
 
@@ -360,9 +362,14 @@ export default function CustomersPage() {
                       </div>
                       <Button
                         className="h-7 rounded-md bg-pos-brand px-3 text-[12px] font-medium text-white hover:bg-pos-brand-dark"
-                        onClick={() =>
-                          router.push(`/new-order?customerId=${selectedId}`)
-                        }
+                        onClick={() => {
+                          const href = `/new-order?customerId=${selectedId}`;
+                          if (isOnline) {
+                            router.push(href);
+                            return;
+                          }
+                          window.location.assign(href);
+                        }}
                       >
                         New order
                       </Button>

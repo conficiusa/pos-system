@@ -46,6 +46,14 @@ function NewOrderInner() {
   const { sidebarUser, userId } = useSessionContext();
   const { isOnline } = useNetworkStatus();
 
+  const navigateTo = (href: string) => {
+    if (isOnline) {
+      router.push(href);
+      return;
+    }
+    window.location.assign(href);
+  };
+
   // Customer selection
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
     searchParams.get("customerId"),
@@ -199,7 +207,7 @@ function NewOrderInner() {
       };
       await localWrite("orders", "insert", newOrder);
       setSubmitted(true);
-      setTimeout(() => router.push(isOnline ? "/" : "/customers"), 1500);
+      setTimeout(() => navigateTo(isOnline ? "/" : "/customers"), 1500);
     } catch {
       // silently fail
     } finally {
@@ -215,7 +223,13 @@ function NewOrderInner() {
         title="New order"
         leading={
           <button
-            onClick={() => router.back()}
+            onClick={() => {
+              if (window.history.length > 1) {
+                router.back();
+                return;
+              }
+              navigateTo("/customers");
+            }}
             className="flex size-7 items-center justify-center rounded-[var(--radius-md)] border border-pos-border-secondary bg-pos-bg-primary"
           >
             <IconBack className="size-3.5" />
@@ -534,7 +548,7 @@ function NewOrderInner() {
             {selectedCustomerId && (
               <Button
                 variant="outline"
-                onClick={() => router.push("/customers")}
+                onClick={() => navigateTo("/customers")}
                 className="mt-3 h-8 w-full rounded-[var(--radius-md)] border-pos-border-tertiary text-[12px] text-pos-text-secondary"
               >
                 View full history
