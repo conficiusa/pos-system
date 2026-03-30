@@ -3,7 +3,7 @@ declare const self: ServiceWorkerGlobalScope;
 
 // Must match the tag registered in idb.ts when queuing a background sync
 const SYNC_TAG = "goldpos-sync-v1";
-const CACHE_NAME = "goldpos-shell-v3";
+const CACHE_NAME = "goldpos-shell-v4";
 
 // App shell — pages that should be available offline
 const SHELL_URLS = [
@@ -22,10 +22,39 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      // Ignore individual failures so one bad URL doesn't block the install
-      .then((cache) =>
-        Promise.all(SHELL_URLS.map((url) => cache.add(url).catch(() => {}))),
-      )
+      .then(async (cache) => {
+        const assetUrls = new Set<string>();
+
+        // Fetch shell pages, cache them, and extract /_next/static/ asset URLs
+        // from HTML responses so the JS/CSS chunks are also available offline.
+        await Promise.all(
+          SHELL_URLS.map(async (url) => {
+            try {
+              const res = await fetch(url);
+              if (!res.ok) return;
+              const clone = res.clone();
+              await cache.put(new Request(url), clone);
+
+              // Only parse HTML responses for asset references
+              const ct = res.headers.get("content-type") || "";
+              if (ct.includes("text/html")) {
+                const html = await res.text();
+                const matches = html.matchAll(/\/_next\/static\/[^"'\s)>]+/g);
+                for (const m of matches) assetUrls.add(m[0]);
+              }
+            } catch {
+              // Individual failures are non-fatal
+            }
+          }),
+        );
+
+        // Pre-cache the extracted static assets (JS chunks, CSS, etc.)
+        if (assetUrls.size > 0) {
+          await Promise.all(
+            [...assetUrls].map((url) => cache.add(url).catch(() => {})),
+          );
+        }
+      })
       .then(() => self.skipWaiting()),
   );
 });

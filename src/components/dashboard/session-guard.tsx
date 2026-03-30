@@ -36,10 +36,12 @@ function FullScreenSpinner() {
 }
 
 // Read a cached session from localStorage — used as an offline fallback only.
-// Returns null when online so the network session always takes precedence.
+// Called only when the network session fetch has already completed and returned
+// null, so we always attempt the fallback regardless of navigator.onLine
+// (which is unreliable and can report "online" when there is no connectivity).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getOfflineCachedSession(): any {
-  if (typeof navigator === "undefined" || navigator.onLine) return null;
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(OFFLINE_SESSION_KEY);
     if (!raw) return null;
