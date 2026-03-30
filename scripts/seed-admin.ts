@@ -177,7 +177,7 @@ async function seedRemote(
 }
 
 async function main() {
-  intro("GoldPOS — Seed Admin Account");
+  intro("A Uphills Trading Enterprise - Seed Admin Account");
 
   let target = getTargetFromArgs();
 

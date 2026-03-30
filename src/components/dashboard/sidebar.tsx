@@ -4,6 +4,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-client";
+import { businessConfig } from "@/lib/business-config";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import {
   IconCustomers,
@@ -117,11 +118,14 @@ export function Sidebar({
     >
       <div className="px-4 pb-4">
         <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[14px] font-medium text-pos-text-primary">
-              GoldPOS
+          <div className="max-w-[152px]">
+            <p className="text-[13px] font-semibold leading-4 text-pos-text-primary">
+              {businessConfig.name}
             </p>
-            <p className="mt-1 text-[13px] text-pos-text-secondary">{branch}</p>
+            <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.08em] text-pos-brand-ink">
+              {businessConfig.tagline}
+            </p>
+            <p className="mt-2 text-[12px] text-pos-text-secondary">{branch}</p>
           </div>
           {/* Mobile close button */}
           <button

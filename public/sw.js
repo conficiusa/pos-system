@@ -1,4 +1,4 @@
-// GoldPOS Service Worker
+// A Uphills Trading Enterprise Service Worker
 // Strategy:
 //   /_next/static/*  → CacheFirst (content-hashed, immutable)
 //   /_next/*         → NetworkFirst, cache fallback
@@ -10,6 +10,8 @@
 
 const SYNC_TAG = "goldpos-sync-v1";
 const CACHE_NAME = "goldpos-shell-v7";
+const APP_NAME = "A Uphills Trading Enterprise";
+const APP_TAGLINE = "Gold Trading Specialists";
 
 // Static assets that are safe to pre-cache during install.
 // Do NOT include auth-protected HTML pages here — they may not be
@@ -173,9 +175,15 @@ self.addEventListener("fetch", (event) => {
               (fallback) =>
                 fallback ??
                 new Response(
-                  "<!doctype html><html><head><title>Offline</title></head><body>" +
-                    "<p style='font-family:sans-serif;padding:2rem'>You are offline. " +
-                    "Please reconnect to access GoldPOS.</p></body></html>",
+                  "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>" +
+                    APP_NAME +
+                    "</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f2f3ef;color:#1f1b16;font-family:Inter,system-ui,sans-serif}.card{max-width:420px;border:1px solid #ebe6dc;border-radius:20px;background:#fff;padding:28px;box-shadow:0 18px 48px rgba(31,27,22,0.08)}.eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#085041}.title{margin:10px 0 8px;font-size:26px;line-height:1.1}.copy{margin:0;color:#6f6b64;font-size:14px;line-height:1.6}.tag{margin-top:14px;display:inline-flex;border-radius:999px;background:#e1f5ee;padding:6px 10px;font-size:11px;font-weight:600;color:#085041}</style></head><body><div class='card'><div class='eyebrow'>" +
+                    APP_NAME +
+                    "</div><h1 class='title'>You are offline</h1><p class='copy'>This page needs an internet connection to load. Reconnect to continue using " +
+                    APP_NAME +
+                    ".</p><div class='tag'>" +
+                    APP_TAGLINE +
+                    "</div></div></body></html>",
                   {
                     status: 503,
                     headers: { "Content-Type": "text/html" },

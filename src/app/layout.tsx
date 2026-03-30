@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { QueryProvider } from "@/components/query-provider";
+import { businessConfig } from "@/lib/business-config";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -17,12 +18,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "GoldPOS",
-	description: "Gold purchase point-of-sale",
+	title: businessConfig.name,
+	description: businessConfig.description,
 	manifest: "/manifest.json",
 	appleWebApp: {
 		capable: true,
-		title: "GoldPOS",
+		title: businessConfig.shortName,
 		statusBarStyle: "default",
 	},
 };

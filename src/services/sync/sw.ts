@@ -4,6 +4,7 @@ declare const self: ServiceWorkerGlobalScope;
 // Must match the tag registered in idb.ts when queuing a background sync.
 const SYNC_TAG = "goldpos-sync-v1";
 const CACHE_NAME = "goldpos-shell-v5";
+const APP_NAME = "A Uphills Trading Enterprise";
 
 // Static assets that are safe to pre-cache during install.
 // Do NOT include auth-protected HTML pages — they may not be accessible at
@@ -155,7 +156,9 @@ self.addEventListener("fetch", (event) => {
                 new Response(
                   "<!doctype html><html><head><title>Offline</title></head><body>" +
                     "<p style='font-family:sans-serif;padding:2rem'>You are offline. " +
-                    "Please reconnect to access GoldPOS.</p></body></html>",
+                    "Please reconnect to access " +
+                    APP_NAME +
+                    ".</p></body></html>",
                   {
                     status: 503,
                     headers: { "Content-Type": "text/html" },

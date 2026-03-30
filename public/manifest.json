@@ -1,7 +1,7 @@
 {
-  "name": "GoldPOS",
-  "short_name": "GoldPOS",
-  "description": "Gold purchase point-of-sale",
+  "name": "A Uphills Trading Enterprise",
+  "short_name": "A Uphills",
+  "description": "Gold purchase point-of-sale for A Uphills Trading Enterprise.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

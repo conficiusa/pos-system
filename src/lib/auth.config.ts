@@ -10,6 +10,7 @@ import {
   SESSION_UPDATE_AGE,
 } from "@/lib/auth.constants";
 import * as betterAuthSchemas from "@/lib/db/schemas/better-auth.schema";
+import { businessConfig } from "@/lib/business-config";
 import { AuthConfigEnvVar } from "@/lib/get-env";
 import { DB } from "./db";
 import { AccessService } from "@/services/access/access.service";
@@ -31,7 +32,7 @@ export const getAuthOptions = (args: Args) => {
   });
 
   const configOptions = {
-    appName: "GoldPOS",
+    appName: businessConfig.name,
 
     logger: {
       disabled: !config.logsEnabled,

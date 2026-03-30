@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "@/lib/auth-client";
+import { businessConfig } from "@/lib/business-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -37,7 +38,7 @@ export default function LoginPage() {
     <div className="w-full max-w-sm">
       {/* Brand mark */}
       <div className="mb-8 text-center">
-        <div className="inline-flex size-12 items-center justify-center rounded-[var(--radius-lg)] bg-pos-brand">
+        <div className="inline-flex size-14 items-center justify-center rounded-[var(--radius-xl)] bg-pos-brand shadow-[0_16px_40px_rgba(29,158,117,0.22)]">
           <svg
             width="22"
             height="22"
@@ -52,12 +53,17 @@ export default function LoginPage() {
             <path d="M9 12h6M12 9l3 3-3 3" />
           </svg>
         </div>
-        <p className="mt-3 text-[13px] font-medium text-pos-text-primary">
-          GoldPOS
-        </p>
-        <p className="mt-0.5 text-[12px] text-pos-text-tertiary">
-          Sign in to your account
-        </p>
+        <div className="mx-auto mt-4 max-w-[20rem] space-y-2">
+          <p className="text-[18px] font-semibold leading-6 text-pos-text-primary">
+            {businessConfig.name}
+          </p>
+          <div className="inline-flex rounded-full border border-pos-border-tertiary bg-pos-brand-soft px-3 py-1 text-[11px] font-medium tracking-[0.04em] text-pos-brand-ink">
+            {businessConfig.tagline}
+          </div>
+          <p className="text-[12px] text-pos-text-tertiary">
+            Sign in to continue to the dashboard
+          </p>
+        </div>
       </div>
 
       {/* Card */}
