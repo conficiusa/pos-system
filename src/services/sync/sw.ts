@@ -14,10 +14,7 @@ const PRECACHE_URLS = ["/manifest.json"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function cacheResponse(
-  request: Request | string,
-  response: Response,
-): void {
+function cacheResponse(request: Request | string, response: Response): void {
   if (!response || !response.ok) return;
   const clone = response.clone();
   caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
