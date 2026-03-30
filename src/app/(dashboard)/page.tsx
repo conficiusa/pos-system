@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn, exportXlsx, fmtGHS } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
+import { localGetAll } from "@/services/sync/idb"
 import { printOrderReceipt } from "@/lib/print-receipt"
 
 type OrderWithCustomer = {
@@ -68,8 +69,28 @@ export default function OrdersPage() {
 
   const statsQuery = useQuery({
     queryKey: ["reports-stats"],
-    queryFn: () =>
-      fetch("/api/reports/stats").then((r) => r.json() as Promise<{ weeklyOrders: WeeklyStats }>),
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/reports/stats")
+        if (!res.ok) throw new Error(res.statusText)
+        return res.json() as Promise<{ weeklyOrders: WeeklyStats }>
+      } catch {
+        const idbOrders = await localGetAll("orders")
+        const oneWeekAgo = new Date()
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+        const weekly = idbOrders.filter((o) => new Date(o.createdAt) >= oneWeekAgo)
+        return {
+          weeklyOrders: {
+            total: weekly.length,
+            totalPaid: weekly.reduce((sum, o) => sum + o.amountPaid, 0),
+            avgOrder: weekly.length > 0
+              ? weekly.reduce((sum, o) => sum + o.estimatedValue, 0) / weekly.length
+              : 0,
+            pending: idbOrders.filter((o) => o.status === "pending").length,
+          },
+        }
+      }
+    },
   })
   const stats = statsQuery.data?.weeklyOrders ?? null
 
@@ -80,8 +101,38 @@ export default function OrdersPage() {
       if (statusFilter) params.set("status", statusFilter)
       if (searchTerm.trim()) params.set("q", searchTerm.trim())
       const url = `/api/orders${params.toString() ? `?${params}` : ""}`
-      const data = await fetch(url).then((r) => r.json() as Promise<{ data: OrderWithCustomer[] }>)
-      return data.data ?? []
+      try {
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(res.statusText)
+        const data = await res.json() as { data: OrderWithCustomer[] }
+        return data.data ?? []
+      } catch {
+        const [idbOrders, idbCustomers] = await Promise.all([
+          localGetAll("orders"),
+          localGetAll("customers"),
+        ])
+        const custMap = new Map(idbCustomers.map((c) => [c.id, c]))
+        let result = idbOrders.map((o) => {
+          const cust = custMap.get(o.customerId)
+          return {
+            ...o,
+            customerName: cust?.name ?? "Unknown",
+            customerPhone: cust?.phone ?? "",
+          } as OrderWithCustomer
+        })
+        if (statusFilter) result = result.filter((o) => o.status === statusFilter)
+        if (searchTerm.trim()) {
+          const q = searchTerm.trim().toLowerCase()
+          result = result.filter(
+            (o) =>
+              o.customerName.toLowerCase().includes(q) ||
+              (o.orderNumber?.toLowerCase().includes(q) ?? false),
+          )
+        }
+        return result.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+      }
     },
   })
   const orders = ordersQuery.data ?? []

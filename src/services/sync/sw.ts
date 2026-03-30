@@ -129,32 +129,28 @@ self.addEventListener("fetch", (event) => {
   }
 
   // RSC requests (client-side navigations via React Server Components)
-  // These are fetch-mode requests with ?_rsc= that expect RSC payload.
-  // When offline, fall back to the cached HTML for that pathname so the
-  // browser does a full-page render from the app shell.
+  // Cache by pathname only — the _rsc nonce changes per deployment and would
+  // never match on a cache lookup. Serving a cached RSC payload is safe because
+  // these pages are client components that load data via useQuery independently.
   if (url.searchParams.has("_rsc")) {
+    const rscCacheKey = url.pathname + "?_rsc";
     event.respondWith(
       fetch(request)
         .then((res) => {
           if (res.ok) {
             const clone = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+            caches.open(CACHE_NAME).then((c) => c.put(rscCacheKey, clone));
           }
           return res;
         })
-        .catch(() => {
-          const stripped = new Request(url.pathname, {
-            headers: request.headers,
-          });
-          return caches
-            .match(stripped)
-            .then((cached) => cached ?? caches.match("/"))
+        .catch(() =>
+          caches
+            .open(CACHE_NAME)
+            .then((c) => c.match(rscCacheKey))
             .then(
-              (fallback) =>
-                fallback ??
-                new Response("Offline — please reconnect", { status: 503 }),
-            );
-        }),
+              (cached) => cached ?? new Response("", { status: 503 }),
+            ),
+        ),
     );
     return;
   }

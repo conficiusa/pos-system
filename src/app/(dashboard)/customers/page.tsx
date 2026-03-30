@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn, fmtGHS } from "@/lib/utils"
 import { useSessionContext } from "@/components/dashboard/session-guard"
-import { localWrite, flushSyncQueue } from "@/services/sync/idb"
+import { localWrite, localGetAll, flushSyncQueue } from "@/services/sync/idb"
 import { nanoid } from "nanoid"
 import type { Customer, Order } from "@/lib/db/schemas"
 
@@ -76,11 +76,24 @@ export default function CustomersPage() {
 
   const customersQuery = useQuery({
     queryKey: ["customers", debouncedQuery],
-    queryFn: () => {
+    queryFn: async () => {
       const url = debouncedQuery
         ? `/api/customers?q=${encodeURIComponent(debouncedQuery)}`
         : "/api/customers"
-      return fetch(url).then((r) => r.json() as Promise<{ data?: CustomerListItem[] }>)
+      try {
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(res.statusText)
+        return res.json() as Promise<{ data?: CustomerListItem[] }>
+      } catch {
+        let customers = await localGetAll("customers")
+        if (debouncedQuery) {
+          const q = debouncedQuery.toLowerCase()
+          customers = customers.filter(
+            (c) => c.name.toLowerCase().includes(q) || c.phone.toLowerCase().includes(q),
+          )
+        }
+        return { data: customers as CustomerListItem[] }
+      }
     },
   })
   const customers = customersQuery.data?.data ?? []
