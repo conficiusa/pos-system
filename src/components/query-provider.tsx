@@ -123,7 +123,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     }
 
     window.addEventListener(HYDRATION_COMPLETE_EVENT, onHydrated);
-    return () => window.removeEventListener(HYDRATION_COMPLETE_EVENT, onHydrated);
+    return () =>
+      window.removeEventListener(HYDRATION_COMPLETE_EVENT, onHydrated);
   }, [queryClient]);
 
   return (

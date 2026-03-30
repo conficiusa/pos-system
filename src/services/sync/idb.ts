@@ -442,9 +442,7 @@ if (typeof window !== "undefined") {
     navigator.serviceWorker.addEventListener(
       "message",
       (event: MessageEvent) => {
-        if (
-          (event.data as { type?: string })?.type === "SW_SYNC_REQUESTED"
-        ) {
+        if ((event.data as { type?: string })?.type === "SW_SYNC_REQUESTED") {
           flushSyncQueue().catch(console.warn);
         }
       },

@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,19 +8,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { apiFetch } from "@/lib/api-client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { apiFetch } from "@/lib/api-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Props = {
-  open: boolean
-  title?: string
-  description?: string
-  onConfirm: () => void
-  onCancel: () => void
-}
+  open: boolean;
+  title?: string;
+  description?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+};
 
 export function ConfirmPasswordDialog({
   open,
@@ -29,21 +29,21 @@ export function ConfirmPasswordDialog({
   onConfirm,
   onCancel,
 }: Props) {
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, setIsPending] = useState(false)
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
 
   const handleClose = () => {
-    setPassword("")
-    setError(null)
-    onCancel()
-  }
+    setPassword("");
+    setError(null);
+    onCancel();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!password) return
-    setError(null)
-    setIsPending(true)
+    e.preventDefault();
+    if (!password) return;
+    setError(null);
+    setIsPending(true);
 
     try {
       const res = await apiFetch("/api/settings/verify-password", {
@@ -51,27 +51,32 @@ export function ConfirmPasswordDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
         timeoutMs: 5_000,
-      })
-      const data = await res.json() as { valid?: boolean }
+      });
+      const data = (await res.json()) as { valid?: boolean };
 
       if (!data.valid) {
-        setError("Incorrect password. Please try again.")
-        setIsPending(false)
-        return
+        setError("Incorrect password. Please try again.");
+        setIsPending(false);
+        return;
       }
 
-      setPassword("")
-      setError(null)
-      onConfirm()
+      setPassword("");
+      setError(null);
+      onConfirm();
     } catch {
-      setError("Something went wrong. Please try again.")
+      setError("Something went wrong. Please try again.");
     } finally {
-      setIsPending(false)
+      setIsPending(false);
     }
-  }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) handleClose();
+      }}
+    >
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -89,12 +94,15 @@ export function ConfirmPasswordDialog({
               autoComplete="current-password"
               placeholder="••••••••"
             />
-            {error && (
-              <p className="text-[12px] text-red-500">{error}</p>
-            )}
+            {error && <p className="text-[12px] text-red-500">{error}</p>}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isPending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isPending}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={!password || isPending}>
@@ -104,5 +112,5 @@ export function ConfirmPasswordDialog({
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
