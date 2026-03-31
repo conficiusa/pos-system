@@ -42,7 +42,7 @@ const displayId = (o: Pick<PendingOrder, "id" | "orderNumber">) =>
   o.orderNumber ?? `#${o.id.slice(0, 6).toUpperCase()}`;
 
 const SkeletonRow = () => (
-  <div className="grid grid-cols-[110px_1fr_90px_130px_120px] items-center gap-0 border-b border-pos-border-tertiary px-6 py-3.5">
+  <div className="grid grid-cols-[110px_1fr_90px_130px_120px] items-center gap-x-4 border-b border-pos-border-tertiary px-6 py-3.5">
     <span className="h-3.5 w-14 animate-pulse rounded bg-pos-bg-secondary" />
     <span className="h-3.5 w-32 animate-pulse rounded bg-pos-bg-secondary" />
     <span className="h-3 w-10 animate-pulse rounded bg-pos-bg-secondary" />
@@ -506,7 +506,7 @@ export default function ReconciliationPage() {
           {/* Order table */}
           <div className="overflow-hidden rounded-lg border border-pos-border-tertiary bg-pos-bg-primary">
             <div className="overflow-x-auto">
-              <div className="grid min-w-[600px] grid-cols-[110px_1fr_90px_130px_120px] gap-0 border-b border-pos-border-tertiary bg-pos-bg-secondary px-6 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
+              <div className="grid min-w-[600px] grid-cols-[110px_1fr_90px_130px_120px] gap-x-4 border-b border-pos-border-tertiary bg-pos-bg-secondary px-6 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
                 <span>Order</span>
                 <span>Customer</span>
                 <span>Weight</span>
@@ -535,7 +535,7 @@ export default function ReconciliationPage() {
                           if (!isConfirmed) setSelectedId(order.id);
                         }}
                         className={cn(
-                          "grid grid-cols-[110px_1fr_90px_130px_120px] items-center gap-0 border-b border-pos-border-tertiary px-6 py-3.5 text-[13px] transition-colors last:border-b-0",
+                          "grid grid-cols-[110px_1fr_90px_130px_120px] items-center gap-x-4 border-b border-pos-border-tertiary px-6 py-3.5 text-[13px] transition-colors last:border-b-0",
                           isConfirmed
                             ? "cursor-default opacity-50"
                             : isSelected
