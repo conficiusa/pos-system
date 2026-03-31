@@ -57,17 +57,25 @@ const filterButtons = [
   { id: "reconciled", label: "Reconciled" },
 ];
 
+const ORDER_TABLE_COLUMNS =
+  "grid-cols-[minmax(110px,1.1fr)_minmax(180px,1.8fr)_minmax(80px,0.9fr)_minmax(110px,1fr)_minmax(110px,1fr)_minmax(96px,0.95fr)_40px]";
+
 const SkeletonRow = () => (
-  <div className="grid grid-cols-[110px_1fr_90px_120px_120px_100px_40px] items-center gap-x-4 border-b border-pos-border-tertiary px-6 py-[11px]">
+  <div
+    className={cn(
+      "grid items-center gap-x-4 border-b border-pos-border-tertiary px-6 py-[11px]",
+      ORDER_TABLE_COLUMNS,
+    )}
+  >
     <span className="inline-block h-3.5 w-16 animate-pulse rounded bg-pos-bg-secondary" />
     <div className="space-y-1.5">
       <span className="inline-block h-3.5 w-28 animate-pulse rounded bg-pos-bg-secondary" />
       <span className="block h-3 w-20 animate-pulse rounded bg-pos-bg-secondary" />
     </div>
-    <span className="inline-block h-3.5 w-10 animate-pulse rounded bg-pos-bg-secondary" />
-    <span className="inline-block h-3.5 w-20 animate-pulse rounded bg-pos-bg-secondary" />
-    <span className="inline-block h-3.5 w-20 animate-pulse rounded bg-pos-bg-secondary" />
-    <span className="inline-block h-5 w-16 animate-pulse rounded-full bg-pos-bg-secondary" />
+    <span className="inline-block h-3.5 w-10 justify-self-end animate-pulse rounded bg-pos-bg-secondary" />
+    <span className="inline-block h-3.5 w-20 justify-self-end animate-pulse rounded bg-pos-bg-secondary" />
+    <span className="inline-block h-3.5 w-20 justify-self-end animate-pulse rounded bg-pos-bg-secondary" />
+    <span className="inline-block h-5 w-16 justify-self-start animate-pulse rounded-full bg-pos-bg-secondary" />
     <span />
   </div>
 );
@@ -286,16 +294,21 @@ export default function OrdersPage() {
 
           <div className="overflow-hidden rounded-[var(--radius-lg)] border border-pos-border-tertiary bg-pos-bg-primary">
             <div className="overflow-x-auto">
-              <div className="grid min-w-[680px] grid-cols-[110px_1fr_90px_120px_120px_100px_40px] gap-x-4 border-b border-pos-border-tertiary bg-pos-bg-secondary px-6 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
+              <div
+                className={cn(
+                  "grid min-w-[760px] gap-x-4 border-b border-pos-border-tertiary bg-pos-bg-secondary px-6 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary",
+                  ORDER_TABLE_COLUMNS,
+                )}
+              >
                 <span>Order</span>
                 <span>Customer</span>
-                <span>Weight</span>
-                <span>Est. value</span>
-                <span>Paid out</span>
+                <span className="text-right">Weight</span>
+                <span className="text-right">Est. value</span>
+                <span className="text-right">Paid out</span>
                 <span>Status</span>
                 <span />
               </div>
-              <div className="min-w-[680px]">
+              <div className="min-w-[760px]">
                 {ordersQuery.isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <SkeletonRow key={i} />
@@ -316,12 +329,15 @@ export default function OrdersPage() {
                       <div
                         key={order.id}
                         onClick={() => setSelectedId(order.id)}
-                        className="grid cursor-pointer grid-cols-[110px_1fr_90px_120px_120px_100px_40px] items-center gap-x-4 border-b border-pos-border-tertiary px-6 py-[11px] text-[13px] text-pos-text-primary hover:bg-pos-bg-secondary"
+                        className={cn(
+                          "grid cursor-pointer items-center gap-x-4 border-b border-pos-border-tertiary px-6 py-[11px] text-[13px] text-pos-text-primary hover:bg-pos-bg-secondary",
+                          ORDER_TABLE_COLUMNS,
+                        )}
                       >
                         <div className="text-[12px] text-pos-text-secondary">
                           {displayId(order)}
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="font-medium text-pos-text-primary">
                             {order.customerName}
                           </p>
@@ -329,11 +345,15 @@ export default function OrdersPage() {
                             {fmtDate(order.createdAt)}
                           </p>
                         </div>
-                        <div className="text-[12px] text-pos-text-secondary">
+                        <div className="text-right text-[12px] text-pos-text-secondary">
                           {order.weightGrams}g
                         </div>
-                        <div>{fmtGHS(order.estimatedValue)}</div>
-                        <div>{fmtGHS(order.amountPaid)}</div>
+                        <div className="text-right">
+                          {fmtGHS(order.estimatedValue)}
+                        </div>
+                        <div className="text-right">
+                          {fmtGHS(order.amountPaid)}
+                        </div>
                         <div>
                           <span
                             className={cn(
