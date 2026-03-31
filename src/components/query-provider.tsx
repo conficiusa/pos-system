@@ -12,7 +12,7 @@ const CONNECTIVITY_CHECK_URL = "/api/ping";
 const CONNECTIVITY_CHECK_INTERVAL_MS = 15_000;
 const CONNECTIVITY_CHECK_TIMEOUT_MS = 4_000;
 
-async function probeConnectivity(signal: AbortSignal): Promise<boolean> {
+async function probeConnectivity(signal: AbortSignal): Promise<boolean | null> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     return false;
   }
@@ -25,7 +25,11 @@ async function probeConnectivity(signal: AbortSignal): Promise<boolean> {
     });
 
     return res.ok;
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return null;
+    }
+
     return false;
   }
 }
@@ -52,20 +56,34 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let disposed = false;
     let activeController: AbortController | null = null;
+    let probeSequence = 0;
 
     async function refreshOnlineState() {
       activeController?.abort();
 
       const controller = new AbortController();
       activeController = controller;
-      const timeoutId = window.setTimeout(
-        () => controller.abort(),
-        CONNECTIVITY_CHECK_TIMEOUT_MS,
-      );
+      const probeId = ++probeSequence;
+      let timedOut = false;
+      const timeoutId = window.setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, CONNECTIVITY_CHECK_TIMEOUT_MS);
 
       try {
         const reachable = await probeConnectivity(controller.signal);
-        if (!disposed) {
+        if (
+          !disposed &&
+          activeController === controller &&
+          probeId === probeSequence
+        ) {
+          if (reachable === null) {
+            if (timedOut) {
+              onlineManager.setOnline(false);
+            }
+            return;
+          }
+
           onlineManager.setOnline(reachable);
         }
       } finally {
