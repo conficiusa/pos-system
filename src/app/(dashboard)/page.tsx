@@ -58,7 +58,7 @@ const filterButtons = [
 ];
 
 const SkeletonRow = () => (
-  <div className="grid grid-cols-[100px_1fr_80px_100px_100px_80px_36px] items-center gap-0 border-b border-pos-border-tertiary px-4 py-[11px]">
+  <div className="grid grid-cols-[110px_1fr_90px_120px_120px_100px_40px] items-center gap-0 border-b border-pos-border-tertiary px-6 py-[11px]">
     <span className="inline-block h-3.5 w-16 animate-pulse rounded bg-pos-bg-secondary" />
     <div className="space-y-1.5">
       <span className="inline-block h-3.5 w-28 animate-pulse rounded bg-pos-bg-secondary" />
@@ -286,7 +286,7 @@ export default function OrdersPage() {
 
           <div className="overflow-hidden rounded-[var(--radius-lg)] border border-pos-border-tertiary bg-pos-bg-primary">
             <div className="overflow-x-auto">
-              <div className="grid min-w-150 grid-cols-[100px_1fr_80px_100px_100px_80px_36px] gap-0 border-b border-pos-border-tertiary bg-pos-bg-secondary px-4 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
+              <div className="grid min-w-[680px] grid-cols-[110px_1fr_90px_120px_120px_100px_40px] gap-0 border-b border-pos-border-tertiary bg-pos-bg-secondary px-6 py-2 text-[11px] font-medium uppercase tracking-[0.04em] text-pos-text-tertiary">
                 <span>Order</span>
                 <span>Customer</span>
                 <span>Weight</span>
@@ -295,7 +295,7 @@ export default function OrdersPage() {
                 <span>Status</span>
                 <span />
               </div>
-              <div className="min-w-150">
+              <div className="min-w-[680px]">
                 {ordersQuery.isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <SkeletonRow key={i} />
@@ -316,7 +316,7 @@ export default function OrdersPage() {
                       <div
                         key={order.id}
                         onClick={() => setSelectedId(order.id)}
-                        className="grid cursor-pointer grid-cols-[100px_1fr_80px_100px_100px_80px_36px] items-center gap-0 border-b border-pos-border-tertiary px-4 py-[11px] text-[13px] text-pos-text-primary hover:bg-pos-bg-secondary"
+                        className="grid cursor-pointer grid-cols-[110px_1fr_90px_120px_120px_100px_40px] items-center gap-0 border-b border-pos-border-tertiary px-6 py-[11px] text-[13px] text-pos-text-primary hover:bg-pos-bg-secondary"
                       >
                         <div className="text-[12px] text-pos-text-secondary">
                           {displayId(order)}
